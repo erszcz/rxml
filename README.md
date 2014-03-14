@@ -1,7 +1,7 @@
 exml
 ====
 
-[![Build Status](https://secure.travis-ci.org/paulgray/exml.png)](http://travis-ci.org/paulgray/exml)
+[![Build Status](https://secure.travis-ci.org/esl/exml.png)](http://travis-ci.org/esl/exml)
 
 **exml** is an Erlang library helpful with parsing XML streams
 and doing some basic XML structures manipulation.
