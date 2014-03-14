@@ -9,8 +9,8 @@ and doing some basic XML structures manipulation.
 Building
 ========
 
-**exml** is rebar-compatible OTP application, run *make* or
-*./rebar compile* in order to build it.
+**exml** is rebar-compatible OTP application, run `make` or
+`./rebar compile` in order to build it.
 
 As a requirement, development headers for expat library are
 required.
@@ -22,12 +22,14 @@ Using
 documents at once.
 
 At first, new parser instance must be created:
-<pre>
-    {ok, Parser} = exml:new_parser().
-</pre>
+
+```erlang
+{ok, Parser} = exml:new_parser().
+```
 
 Then, one must feed parser with XML document:
-<pre>
-    ok = exml:parse(Parser, <<"<my_xml_doc/>">>, 1).
-</pre>
+
+```erlang
+ok = exml:parse(Parser, <<"<my_xml_doc/>">>, 1).
+```
 
