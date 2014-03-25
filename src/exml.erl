@@ -13,7 +13,21 @@
 -export([parse/1]).
 -export([to_list/1, to_binary/1, to_iolist/1,
          to_pretty_iolist/1, to_pretty_iolist/3]).
--export([escape_cdata/1, unescape_cdata/1, unescape_cdata_as/2]).
+-export([escape_attr/1, unescape_attr/1,
+         escape_cdata/1, unescape_cdata/1, unescape_cdata_as/2]).
+-on_load(load/0).
+
+-spec load() -> any().
+load() ->
+    PrivDir = case code:priv_dir(?MODULE) of
+                  {error, _} ->
+                      EbinDir = filename:dirname(code:which(?MODULE)),
+                      AppPath = filename:dirname(EbinDir),
+                      filename:join(AppPath, "priv");
+                  Path ->
+                      Path
+              end,
+    erlang:load_nif(filename:join(PrivDir, "exml_escape"), none).
 
 -spec to_list(#xmlstreamstart{} | #xmlstreamend{}
               | xmlterm()) -> string().
@@ -80,24 +94,6 @@ to_pretty_iolist(#xmlcdata{content = Content}, Level, Indent) ->
     Shift = lists:duplicate(Level, Indent),
     [Shift, Content, "\n"].
 
--spec escape_cdata(iodata()) -> #xmlcdata{}.
-escape_cdata(Text) ->
-    AmpEsc = re:replace(Text,   "&",  <<"\\&amp;">>, [global]),
-    LtEsc  = re:replace(AmpEsc, "<",  <<"\\&lt;">>,  [global]),
-    GtEsc  = re:replace(LtEsc,  ">",  <<"\\&gt;">>,  [global]),
-    #xmlcdata{content=GtEsc}.
-
--spec unescape_cdata(#xmlcdata{}) -> binary().
-unescape_cdata(CData) ->
-    unescape_cdata_as(binary, CData).
-
--spec unescape_cdata_as(binary|list|iodata, #xmlcdata{}) -> binary().
-unescape_cdata_as(What, #xmlcdata{content=GtEsc}) ->
-    LtEsc  = re:replace(GtEsc,  "&gt;",  ">",   [global]),
-    AmpEsc = re:replace(LtEsc,  "&lt;",  "<",   [global]),
-    Text   = re:replace(AmpEsc, "&amp;", "\\&", [global, {return, What}]),
-    Text.
-
 -spec attrs_to_iolist([{binary(), binary()}], iolist()) -> iolist().
 attrs_to_iolist([], Acc) ->
     Acc;
@@ -118,3 +114,47 @@ parse(XML) ->
              end,
     ok = exml_stream:free_parser(Parser),
     Result.
+
+-spec escape_cdata(iodata()) -> #xmlcdata{}.
+escape_cdata(Content) ->
+    #xmlcdata{content = escape_cdata_nif(Content)}.
+
+-spec unescape_cdata(#xmlcdata{}) -> binary().
+unescape_cdata(#xmlcdata{content = Content}) ->
+    unescape_cdata_nif(Content).
+
+-spec unescape_cdata_as(binary|list|iodata, #xmlcdata{}) -> binary().
+unescape_cdata_as(What, CData) ->
+    unescape_cdata_as_erl(What, CData).
+
+-spec escape_cdata_nif(iodata()) -> binary().
+escape_cdata_nif(_Data) ->
+    erlang:nif_error({?MODULE, nif_not_loaded}).
+
+-spec unescape_cdata_nif(iodata()) -> binary().
+unescape_cdata_nif(_Data) ->
+    erlang:nif_error({?MODULE, nif_not_loaded}).
+
+-spec unescape_cdata_as_erl(binary|list|iodata, #xmlcdata{}) -> binary().
+unescape_cdata_as_erl(What, #xmlcdata{content=GtEsc}) ->
+    LtEsc  = re:replace(GtEsc,  "&gt;",  ">",   [global]),
+    AmpEsc = re:replace(LtEsc,  "&lt;",  "<",   [global]),
+    Text   = re:replace(AmpEsc, "&amp;", "\\&", [global, {return, What}]),
+    Text.
+
+-spec escape_attr(binary()) -> binary().
+escape_attr(Text) ->
+    escape_attr_nif(Text).
+
+-spec unescape_attr(binary()) -> binary().
+unescape_attr(Text) ->
+    unescape_attr_nif(Text).
+
+-spec escape_attr_nif(binary()) -> binary().
+escape_attr_nif(_Data) ->
+    erlang:nif_error({?MODULE, nif_not_loaded}).
+
+-spec unescape_attr_nif(binary()) -> binary().
+unescape_attr_nif(_Data) ->
+    erlang:nif_error({?MODULE, nif_not_loaded}).
+
