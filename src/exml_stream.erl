@@ -27,17 +27,18 @@
 %%% Public API
 %%%===================================================================
 
--spec new_parser() -> {ok, #parser{}} | {error, any()}.
+-spec new_parser() -> {ok, parser()} | {error, any()}.
 new_parser() ->
-    case exml_event:new_parser() of
-        {ok, EventParser} ->
-            {ok, #parser{event_parser=EventParser}};
-        {error, Error} ->
-            {error, Error}
+    try
+        {ok, EventParser} = exml_event:new_parser(),
+        {ok, #parser{event_parser = EventParser}}
+    catch
+        E:R ->
+            {error, {E, R}}
     end.
 
--spec parse(#parser{}, binary()) ->
-        {ok, #parser{}, [xmlstreamelement()]} | {error, {string(), binary()}}.
+-spec parse(parser(), binary()) ->
+        {ok, parser(), [xmlstreamelement()]} | {error, {string(), binary()}}.
 parse(#parser{event_parser = EventParser, stack = OldStack} = Parser, Input) ->
     case exml_event:parse(EventParser, Input) of
         {ok, Events} ->
@@ -47,17 +48,18 @@ parse(#parser{event_parser = EventParser, stack = OldStack} = Parser, Input) ->
             {error, {Msg, Input}}
     end.
 
--spec reset_parser(#parser{}) -> {ok, #parser{}} | {error, any()}.
-reset_parser(#parser{event_parser=EventParser}) ->
-    case exml_event:reset_parser(EventParser) of
-        ok ->
-            %% drop all the state except event_parser
-            {ok, #parser{event_parser=EventParser}};
-        Error ->
-            {error, Error}
+-spec reset_parser(parser()) -> {ok, parser()} | {error, any()}.
+reset_parser(#parser{event_parser = EventParser}) ->
+    try
+        exml_event:reset_parser(EventParser),
+        %% drop all the state except event_parser
+        {ok, #parser{event_parser = EventParser}}
+    catch
+        E:R ->
+            {error, {E, R}}
     end.
 
--spec free_parser(#parser{}) -> ok | {error, any()}.
+-spec free_parser(parser()) -> ok | {error, any()}.
 free_parser(#parser{event_parser = EventParser}) ->
     exml_event:free_parser(EventParser).
 

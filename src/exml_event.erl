@@ -15,6 +15,10 @@
          parse/2,
          parse_final/2]).
 
+-export_type([c_parser/0]).
+
+-opaque c_parser() :: binary().
+
 -on_load(load/0).
 
 -spec load() -> any().
@@ -29,27 +33,27 @@ load() ->
               end,
     erlang:load_nif(filename:join(PrivDir, "exml_event"), none).
 
--spec new_parser() -> term().
+-spec new_parser() -> {ok, c_parser()}.
 new_parser() ->
-    throw({?MODULE, nif_not_loaded}).
+    erlang:nif_error(not_loaded).
 
--spec reset_parser(term()) -> ok.
-reset_parser(_Parser) ->
-    throw({?MODULE, nif_not_loaded}).
+-spec reset_parser(c_parser()) -> ok.
+reset_parser(Parser) ->
+    erlang:nif_error(not_loaded, [Parser]).
 
--spec free_parser(term()) -> ok.
-free_parser(_Parser) ->
-    throw({?MODULE, nif_not_loaded}).
+-spec free_parser(c_parser()) -> ok.
+free_parser(Parser) ->
+    erlang:nif_error(not_loaded, [Parser]).
 
--spec parse(term(), binary()) -> {ok, list()} | {error, string()}.
+-spec parse(c_parser(), binary()) -> {ok, list()} | {error, string()}.
 parse(Parser, Data) ->
     do_parse(Parser, Data, 0).
 
--spec parse_final(term(), binary()) -> {ok, list()} | {error, string()}.
+-spec parse_final(c_parser(), binary()) -> {ok, list()} | {error, string()}.
 parse_final(Parser, Data) ->
     do_parse(Parser, Data, 1).
 
--spec do_parse(term(), binary(), 0 | 1) -> {ok, list()} | {error, string()}.
+-spec do_parse(c_parser(), binary(), 0 | 1) -> {ok, list()} | {error, string()}.
 do_parse(Parser, Data, Final) ->
     case parse_nif(Parser, Data, Final) of
         {ok, Res} ->
@@ -58,6 +62,6 @@ do_parse(Parser, Data, Final) ->
             Error
     end.
 
--spec parse_nif(term(), binary(), integer()) -> list().
-parse_nif(_Parser, _Data, _Final) ->
-    throw({?MODULE, nif_not_loaded}).
+-spec parse_nif(c_parser(), binary(), integer()) -> {ok, list()} | {error, string()}.
+parse_nif(Parser, Data, Final) ->
+    erlang:nif_error(not_loaded, [Parser, Data, Final]).
