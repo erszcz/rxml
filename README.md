@@ -53,4 +53,29 @@ Which results in:
 
 `exml:to_binary/1` works similarly.
 
+There're also `exml:to_pretty_iolist/1,3` for a quick'n'dirty document
+preview (pastable into `erl`):
+
+```erlang
+rr("include/exml.hrl").
+El = #xmlel{name = <<"outer">>,
+            attrs = [{<<"attr1">>, <<"val1">>},
+                     {<<"attr2">>, <<"val-two">>}],
+            children = [#xmlel{name = <<"inner-childless">>},
+                        #xmlel{name = <<"inner-w-children">>,
+                               children = [#xmlel{name = <<"a">>}]}]}.
+io:format("~s", [exml:to_pretty_iolist(El)]).
+```
+
+which prints:
+
+```xml
+<outer attr2='val-two' attr1='val1'>
+  <inner-childless/>
+  <inner-w-children>
+    <a/>
+  </inner-w-children>
+</outer>
+```
+
 For an example of using the streaming API see `test/exml_stream_tests.erl`.
