@@ -9,7 +9,11 @@
 -include("exml_event.hrl").
 
 -export([load/0]).
--export([new_parser/0, reset_parser/1, free_parser/1, parse/2, parse_final/2]).
+-export([new_parser/0,
+         reset_parser/1,
+         free_parser/1,
+         parse/2,
+         parse_final/2]).
 
 -on_load(load/0).
 
