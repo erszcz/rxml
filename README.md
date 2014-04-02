@@ -21,15 +21,36 @@ Using
 **exml** can parse both XML streams as well as single XML
 documents at once.
 
-At first, a new parser instance must be created:
+To parse a whole XML document:
 
 ```erlang
-{ok, Parser} = exml:new_parser().
+{ok, Parser} = exml:parse(<<"<my_xml_doc/>">>).
 ```
 
-Then, one must feed the parser with an XML document:
+To generate an XML document from Erlang terms:
 
 ```erlang
-ok = exml:parse(Parser, <<"<my_xml_doc/>">>, 1).
+El = #xmlel{name = <<"foo">>,
+            attrs = [{<<"attr1">>, <<"bar">>}],
+            children = [{xmlcdata, <<"Some Value">>}]},
+exml:to_list(El).
 ```
 
+or (pastable into `erl` shell):
+
+```erlang
+El = {xmlel, <<"foo">>,
+      [{<<"attr1">>, <<"bar">>}],
+      [{xmlcdata, <<"Some Value">>}]}.
+exml:to_list(El).
+```
+
+Which results in:
+
+```xml
+<foo attr1='bar'>Some Value</foo>
+```
+
+`exml:to_binary/1` works similarly.
+
+For an example of using the streaming API see `test/exml_stream_tests.erl`.
