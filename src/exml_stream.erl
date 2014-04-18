@@ -107,14 +107,18 @@ parse_events([{xml_element_start, Name, NSs, Attrs} | Rest], Stack, Acc, Infinit
     parse_events(Rest, [#xmlel{name = Name, attrs = NewAttrs} | Stack], Acc, InfiniteStream);
 parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name}], Acc, false) ->
     parse_events(Rest, [], [#xmlstreamend{name = Name} | Acc], false);
-parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name} = Element, Top], Acc, InfiniteStream) ->
-    parse_events(Rest, [Top], [xml_element(Element) | Acc], InfiniteStream);
+parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name} = Element], Acc, true) ->
+    parse_events(Rest, [], [xml_element(Element) | Acc], true);
+parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name} = Element, Top], Acc, false) ->
+    parse_events(Rest, [Top], [xml_element(Element) | Acc], false);
 parse_events([{xml_element_end, _Name} | Rest], [Element, Parent | Stack], Acc, InfiniteStream) ->
     NewElement = Element#xmlel{children = lists:reverse(Element#xmlel.children)},
     NewParent = Parent#xmlel{children = [NewElement | Parent#xmlel.children]},
     parse_events(Rest, [NewParent | Stack], Acc, InfiniteStream);
-parse_events([{xml_cdata, _CData} | Rest], [Top], Acc, InfiniteStream) ->
-    parse_events(Rest, [Top], Acc, InfiniteStream);
+parse_events([{xml_cdata, _CData} | Rest], [Top], Acc, false) ->
+    parse_events(Rest, [Top], Acc, false);
+parse_events([{xml_cdata, _CData} | Rest], [], Acc, true) ->
+    parse_events(Rest, [], Acc, true);
 parse_events([{xml_cdata, CData} | Rest],
              [#xmlel{children = [#xmlcdata{content = Content} | RestChildren]} = XML | Stack],
              Acc, InfiniteStream) ->
