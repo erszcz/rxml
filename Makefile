@@ -39,5 +39,4 @@ exml_plt: dialyzer/exml.plt
 
 dialyzer: erlang_plt exml_plt
 	@dialyzer --plts dialyzer/*.plt --no_check_plt \
-	--get_warnings -o dialyzer/error.log ebin; \
-	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
+	--get_warnings -o dialyzer/error.log ebin
