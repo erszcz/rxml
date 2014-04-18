@@ -67,7 +67,8 @@ parse(#parser{event_parser = EventParser, stack = OldStack, config = Config} = P
                                                 Config#config.infinite_stream),
             NewParser = if
                             NewStack =:= [] andalso Config#config.autoreset ->
-                                reset_parser(Parser);
+                                {ok, NewParser0} = reset_parser(Parser),
+                                NewParser0;
                             true ->
                                 Parser
                         end,
