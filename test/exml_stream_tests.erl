@@ -75,6 +75,26 @@ stream_reopen_test() ->
     ?assertIsBanana(Elements2),
     ok = exml_stream:free_parser(Parser3).
 
+infinit_framed_stream_test() ->
+    {ok, Parser0} = exml_stream:new_parser([{infinite_stream, true},
+                                            {autoreset, true}]),
+    Els = [#xmlel{name = <<"open">>,
+                  attrs = [{<<"xmlns">>, <<"urn:ietf:params:xml:ns:xmpp-framing">>},
+                           {<<"to">>, <<"example.com">>},
+                           {<<"version">>, <<"1.0">>}]},
+           #xmlel{name = <<"foo">>},
+           #xmlel{name = <<"message">>,
+                  attrs = [{<<"to">>, <<"ala@example.com">>}],
+                  children = [#xmlel{name = <<"body">>,
+                                     children = [#xmlcdata{content = <<"Hi, How Are You?">>}]}]}
+    ],
+    lists:foldl(fun(#xmlel{name = Name} = Elem, Parser) ->
+        Bin = exml:to_binary(Elem),
+        {ok, Parser1, [Element]} = exml_stream:parse(Parser, Bin), %% matches to one element list
+        #xmlel{ name = Name} = Element, %% checks if returned is xmlel of given name
+        Parser1
+    end, Parser0, Els).
+
 parse_error_test() ->
     {ok, Parser0} = exml_stream:new_parser(),
     Input = <<"top-level non-tag">>,

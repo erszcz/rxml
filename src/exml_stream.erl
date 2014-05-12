@@ -21,17 +21,21 @@
 
 %% infinite_stream - no distinct "stream start" or "stream end", only #xmlel{} will be returned
 %% autoreset - will reset expat after each parsed document
+%%             use only when complete xml document is sent to the parser
+%%             for example XMPP over WebSocekts - http://tools.ietf.org/html/draft-ietf-xmpp-websocket
 -type parser_opt() :: {infinite_stream, boolean()} | {autoreset, boolean()}.
 
--record(parser, {
-          event_parser,
-          config,
-          stack = []
-         }).
-
 -record(config, {
-          infinite_stream,
-          autoreset
+    infinite_stream :: boolean(),
+    autoreset :: boolean()
+}).
+
+-type parser_cfg() :: #config{}.
+
+-record(parser, {
+          event_parser :: exml_event:c_parser(),
+          config :: parser_cfg(),
+          stack = [] :: list()
          }).
 
 -type parser() :: #parser{}.
