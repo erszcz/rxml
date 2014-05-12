@@ -11,15 +11,32 @@
 -include("exml_stream.hrl").
 
 -export([new_parser/0,
+         new_parser/1,
          parse/2,
          reset_parser/1,
          free_parser/1]).
+
 -export_type([parser/0]).
+-export_type([parser_opt/0]).
+
+%% infinite_stream - no distinct "stream start" or "stream end", only #xmlel{} will be returned
+%% autoreset - will reset expat after each parsed document
+%%             use only when complete xml document is sent to the parser
+%%             for example XMPP over WebSocekts - http://tools.ietf.org/html/draft-ietf-xmpp-websocket
+-type parser_opt() :: {infinite_stream, boolean()} | {autoreset, boolean()}.
+
+-record(config, {
+    infinite_stream :: boolean(),
+    autoreset :: boolean()
+}).
+
+-type parser_cfg() :: #config{}.
 
 -record(parser, {
-        event_parser,
-        stack = []
-}).
+          event_parser :: exml_event:c_parser(),
+          config :: parser_cfg(),
+          stack = [] :: list()
+         }).
 
 -type parser() :: #parser{}.
 
@@ -29,9 +46,17 @@
 
 -spec new_parser() -> {ok, parser()} | {error, any()}.
 new_parser() ->
+    new_parser([]).
+
+-spec new_parser([parser_opt()]) -> {ok, parser()} | {error, any()}.
+new_parser(Opts)->
     try
         {ok, EventParser} = exml_event:new_parser(),
-        {ok, #parser{event_parser = EventParser}}
+        {ok, #parser{event_parser = EventParser,
+                     config = #config{
+                                 infinite_stream = proplists:get_value(infinite_stream, Opts, false),
+                                 autoreset = proplists:get_value(autoreset, Opts, false)}
+                    }}
     catch
         E:R ->
             {error, {E, R}}
@@ -39,21 +64,29 @@ new_parser() ->
 
 -spec parse(parser(), binary()) ->
         {ok, parser(), [xmlstreamelement()]} | {error, {string(), binary()}}.
-parse(#parser{event_parser = EventParser, stack = OldStack} = Parser, Input) ->
+parse(#parser{event_parser = EventParser, stack = OldStack, config = Config} = Parser, Input) ->
     case exml_event:parse(EventParser, Input) of
         {ok, Events} ->
-            {Elements, NewStack} = parse_events(Events, OldStack, []),
-            {ok, Parser#parser{stack=NewStack}, Elements};
+            {Elements, NewStack} = parse_events(Events, OldStack, [],
+                                                Config#config.infinite_stream),
+            NewParser = if
+                            NewStack =:= [] andalso Config#config.autoreset ->
+                                {ok, NewParser0} = reset_parser(Parser),
+                                NewParser0;
+                            true ->
+                                Parser
+                        end,
+            {ok, NewParser#parser{stack=NewStack}, Elements};
         {error, Msg} ->
             {error, {Msg, Input}}
     end.
 
 -spec reset_parser(parser()) -> {ok, parser()} | {error, any()}.
-reset_parser(#parser{event_parser = EventParser}) ->
+reset_parser(#parser{event_parser = EventParser, config = Config}) ->
     try
         exml_event:reset_parser(EventParser),
         %% drop all the state except event_parser
-        {ok, #parser{event_parser = EventParser}}
+        {ok, #parser{event_parser = EventParser, config = Config}}
     catch
         E:R ->
             {error, {E, R}}
@@ -67,33 +100,38 @@ free_parser(#parser{event_parser = EventParser}) ->
 %%% Helpers
 %%%===================================================================
 
--spec parse_events(list(), list(), list()) -> {list(xmlstreamelement()), list()}.
-parse_events([], Stack, Acc) ->
+-spec parse_events(list(), list(), list(), boolean()) -> {list(xmlstreamelement()), list()}.
+parse_events([], Stack, Acc, _InfiniteStream) ->
     {lists:reverse(Acc), Stack};
-parse_events([{xml_element_start, Name, NSs, Attrs} | Rest], [], Acc) ->
+parse_events([{xml_element_start, Name, NSs, Attrs} | Rest], [], Acc, false) ->
     NewAttrs = nss_to_fake_attrs(NSs, []) ++ Attrs,
     parse_events(Rest, [#xmlel{name = Name, attrs = NewAttrs}],
-                 [#xmlstreamstart{name = Name, attrs = NewAttrs} | Acc]);
-parse_events([{xml_element_start, Name, NSs, Attrs} | Rest], Stack, Acc) ->
+                 [#xmlstreamstart{name = Name, attrs = NewAttrs} | Acc], false);
+parse_events([{xml_element_start, Name, NSs, Attrs} | Rest], Stack, Acc, InfiniteStream) ->
     NewAttrs = nss_to_fake_attrs(NSs, []) ++ Attrs,
-    parse_events(Rest, [#xmlel{name = Name, attrs = NewAttrs} | Stack], Acc);
-parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name}], Acc) ->
-    parse_events(Rest, [], [#xmlstreamend{name = Name} | Acc]);
-parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name} = Element, Top], Acc) ->
-    parse_events(Rest, [Top], [xml_element(Element) | Acc]);
-parse_events([{xml_element_end, _Name} | Rest], [Element, Parent | Stack], Acc) ->
+    parse_events(Rest, [#xmlel{name = Name, attrs = NewAttrs} | Stack], Acc, InfiniteStream);
+parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name}], Acc, false) ->
+    parse_events(Rest, [], [#xmlstreamend{name = Name} | Acc], false);
+parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name} = Element], Acc, true) ->
+    parse_events(Rest, [], [xml_element(Element) | Acc], true);
+parse_events([{xml_element_end, Name} | Rest], [#xmlel{name = Name} = Element, Top], Acc, false) ->
+    parse_events(Rest, [Top], [xml_element(Element) | Acc], false);
+parse_events([{xml_element_end, _Name} | Rest], [Element, Parent | Stack], Acc, InfiniteStream) ->
     NewElement = Element#xmlel{children = lists:reverse(Element#xmlel.children)},
     NewParent = Parent#xmlel{children = [NewElement | Parent#xmlel.children]},
-    parse_events(Rest, [NewParent | Stack], Acc);
-parse_events([{xml_cdata, _CData} | Rest], [Top], Acc) ->
-    parse_events(Rest, [Top], Acc);
-parse_events([{xml_cdata, CData} | Rest], [#xmlel{children = [#xmlcdata{content = Content} |
-                                                                   RestChildren]} = XML | Stack], Acc) ->
+    parse_events(Rest, [NewParent | Stack], Acc, InfiniteStream);
+parse_events([{xml_cdata, _CData} | Rest], [Top], Acc, false) ->
+    parse_events(Rest, [Top], Acc, false);
+parse_events([{xml_cdata, _CData} | Rest], [], Acc, true) ->
+    parse_events(Rest, [], Acc, true);
+parse_events([{xml_cdata, CData} | Rest],
+             [#xmlel{children = [#xmlcdata{content = Content} | RestChildren]} = XML | Stack],
+             Acc, InfiniteStream) ->
     NewChildren = [#xmlcdata{content = list_to_binary([Content, CData])} | RestChildren],
-    parse_events(Rest, [XML#xmlel{children = NewChildren} | Stack], Acc);
-parse_events([{xml_cdata, CData} | Rest], [Element | Stack], Acc) ->
+    parse_events(Rest, [XML#xmlel{children = NewChildren} | Stack], Acc, InfiniteStream);
+parse_events([{xml_cdata, CData} | Rest], [Element | Stack], Acc, InfiniteStream) ->
     NewChildren = [#xmlcdata{content = CData} | Element#xmlel.children],
-    parse_events(Rest, [Element#xmlel{children = NewChildren} | Stack], Acc).
+    parse_events(Rest, [Element#xmlel{children = NewChildren} | Stack], Acc, InfiniteStream).
 
 -spec xml_element(#xmlel{}) -> #xmlel{}.
 xml_element(#xmlel{children = Children} = Element) ->
