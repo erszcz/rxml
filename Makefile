@@ -15,7 +15,7 @@ test: compile
 	./rebar skip_deps=true eunit
 
 rebar:
-	wget http://cloud.github.com/downloads/basho/rebar/rebar && chmod u+x rebar
+	wget https://github.com/rebar/rebar/releases/download/2.5.1/rebar && chmod u+x rebar
 
 dialyzer/erlang.plt:
 	@mkdir -p dialyzer

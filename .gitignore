@@ -4,4 +4,3 @@
 /.eunit/
 /logs/
 /test/*.beam
-/rebar
