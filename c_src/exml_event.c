@@ -155,7 +155,6 @@ static ERL_NIF_TERM new_parser(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
     *xml_parser = parser;
     parser_resource = enif_make_resource(env, (void *)xml_parser);
     enif_release_resource(xml_parser);
-
     return enif_make_tuple(env, 2, OK, parser_resource);
 };
 
@@ -179,21 +178,25 @@ static ERL_NIF_TERM reset_parser(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
     return OK;
 };
 
+static void parser_dtor( ErlNifEnv *env, void* obj )
+{
+    XML_Parser* pParser = (XML_Parser*) obj;
+    if (!pParser)
+        return;
+
+    expat_parser* parser_data;
+    parser_data = XML_GetUserData( *pParser );
+
+    enif_free( parser_data );
+    parser_data = NULL;
+
+    XML_ParserFree( *pParser );
+    pParser = NULL;
+}
+
 static ERL_NIF_TERM free_parser(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    XML_Parser **parser;
-
-    assert(argc == 1);
-
-    if (!enif_get_resource(env, argv[0], PARSER_POINTER, (void **)&parser))
-        return enif_make_badarg(env);
-
-    expat_parser *parser_data = XML_GetUserData((XML_Parser)(*parser));
-    enif_free(parser_data);
-
-    XML_ParserFree((XML_Parser)(*parser));
-
-    return OK;
+    return reset_parser( env, argc, argv );
 };
 
 static ERL_NIF_TERM parse(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
@@ -234,10 +237,9 @@ static ERL_NIF_TERM parse(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
 static int load(ErlNifEnv* env, void **priv, ERL_NIF_TERM info)
 {
-    PARSER_POINTER = enif_open_resource_type(env, NULL, "parser_pointer", NULL,
+    PARSER_POINTER = enif_open_resource_type(env, NULL, "parser_pointer", &parser_dtor,
                                              ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER,
                                              NULL);
-
     XML_ELEMENT_START = enif_make_atom(env, "xml_element_start");
     XML_ELEMENT_END = enif_make_atom(env, "xml_element_end");
     XML_CDATA = enif_make_atom(env, "xml_cdata");
