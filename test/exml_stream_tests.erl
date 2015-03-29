@@ -121,3 +121,20 @@ cdata_test() ->
     assert_parses_escape_cdata(<<"><tag">>),
     assert_parses_escape_cdata(<<"<!--">>),
     assert_parses_escape_cdata(<<"<![CDATA[ test">>).
+
+-define(ATTR_TEST_STREAM, <<"<stream:stream xmlns:stream='something'><quote attr=\"&amp;&lt;&gt;&quot;&apos;&#xA;&#x9;&#xD;\"/></stream:stream>">>).
+
+conv_attr_test() ->
+    AssertParses = fun(Input) ->
+                           {ok, Parser0} = exml_stream:new_parser(),
+                           {ok, Parser1, Elements} = exml_stream:parse(Parser0, Input),
+                           ok = exml_stream:free_parser(Parser1),
+                           ?assertMatch([_, #xmlel{attrs = [{<<"attr">>, <<"&<>\"'\n\t\r">>}]} | _],
+                                                   Elements),
+                           Elements
+                   end,
+    Elements = AssertParses(?ATTR_TEST_STREAM),
+    AssertParses(exml:to_binary(Elements)),
+    AssertParses(list_to_binary(exml:to_list(Elements))),
+    AssertParses(list_to_binary(exml:to_iolist(Elements))).
+
