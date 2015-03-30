@@ -98,7 +98,7 @@ to_pretty_iolist(#xmlcdata{content = Content}, Level, Indent) ->
 attrs_to_iolist([], Acc) ->
     Acc;
 attrs_to_iolist([{Name, Value} | Rest], Acc) ->
-    attrs_to_iolist(Rest, [" ", Name, "='", Value, "'" | Acc]).
+    attrs_to_iolist(Rest, [" ", Name, "='", escape_attr(Value), "'" | Acc]).
 
 -spec parse(binary()) -> {ok, #xmlel{}} | {error, any()}.
 parse(XML) ->
