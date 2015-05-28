@@ -15,48 +15,38 @@
 
 run(Path, N) ->
     application:start(exml),
-    [apply(?MODULE, F, [Path, N, []]) || F <- [run_exml, run_erlsom, run_xmerl]],
+    {ok, XML} = file:read_file(Path),
+    [apply(?MODULE, F, [XML, N, []]) || F <- [run_exml, run_erlsom, run_xmerl]],
     application:stop(exml).
 
 run_exml(_, 0, Acc) ->
     stats(exml, Acc);
-run_exml(Path, N, Acc) ->
+run_exml(XML, N, Acc) ->
     T = now(),
-
-    {ok, Parser} = exml:new_parser(),
-
-    {ok, Bin} = file:read_file(Path),
-    exml:parse(Parser, Bin, true),
-    exml:free_parser(Parser),
-
+    exml:parse(XML),
     Diff = timer:now_diff(now(), T),
-    run_exml(Path, N-1, [Diff | Acc]).
+    run_exml(XML, N-1, [Diff | Acc]).
 
 
 run_xmerl(_, 0, Acc) ->
     stats(xmerl, Acc);
-run_xmerl(Path, N, Acc) ->
+run_xmerl(XML, N, Acc) ->
     T = now(),
-
-    {ok, EventState, _Rest} = xmerl_sax_parser:file(Path, [{event_fun, fun(E, _, XAcc) -> [E | XAcc] end},
-                                                           {event_state, []}]),
+    {ok, EventState, _Rest} = xmerl_sax_parser:stream(XML, [{event_fun, fun(E, _, XAcc) -> [E | XAcc] end},
+                                                            {event_state, []}]),
     lists:reverse(EventState),
-
     Diff = timer:now_diff(now(), T),
-    run_xmerl(Path, N-1, [Diff | Acc]).
+    run_xmerl(XML, N-1, [Diff | Acc]).
 
 
 run_erlsom(_, 0, Acc) ->
     stats(erlsom, Acc);
-run_erlsom(Path, N, Acc) ->
+run_erlsom(XML, N, Acc) ->
     T = now(),
-
-    {ok, XML} = file:read_file(Path),
     {ok, Events, _} = erlsom:parse_sax(XML, [], fun(E, XAcc) -> [E | XAcc] end),
     lists:reverse(Events),
-
     Diff = timer:now_diff(now(), T),
-    run_erlsom(Path, N-1, [Diff | Acc]).
+    run_erlsom(XML, N-1, [Diff | Acc]).
 
 
 stats(Type, Acc) ->
