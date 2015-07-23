@@ -1,7 +1,7 @@
 .PHONY: rel deps test
 INCLUDE_FILES=$(shell escript tools/get_included_files_h.erl)
 CFLAGS_LINUX = -shared -fPIC -lexpat $(INCLUDE_FILES)
-CFLAGS_DARWIN = -undefined dynamic_lookup -fPIC $(INCLUDE_FILES)
+CFLAGS_DARWIN = -undefined dynamic_lookup -lexpat -fPIC $(INCLUDE_FILES)
 EXML_EVENT_IN=c_src/exml_event.c
 EXML_EVENT_OUT=priv/exml_event.so
 EXML_ESCAPE_IN=c_src/exml_escape.c
