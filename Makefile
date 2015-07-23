@@ -52,14 +52,17 @@ dialyzer: erlang_plt exml_plt
 shared_libs_linux: shared_event_l shared_escape_l
 shared_libs_darwin: shared_event_d shared_escape_d
 
-shared_event_l: $(EXML_EVENT_IN)
+priv:
+	mkdir priv
+
+shared_event_l: priv $(EXML_EVENT_IN)
 	gcc  -o $(EXML_EVENT_OUT)  $(EXML_EVENT_IN) $(CFLAGS_LINUX)
-shared_escape_l:  $(EXML_ESCAPE)
+shared_escape_l: priv $(EXML_ESCAPE)
 	gcc  -o $(EXML_ESCAPE_OUT)  $(EXML_ESCAPE_IN) $(CFLAGS_LINUX)
 
-shared_event_d: $(EXML_EVENT_IN)
+shared_event_d: priv $(EXML_EVENT_IN)
 	gcc  -o $(EXML_EVENT_OUT)  $(EXML_EVENT_IN) $(CFLAGS_DARWIN)
-shared_escape_d:  $(EXML_ESCAPE)
+shared_escape_d: priv $(EXML_ESCAPE)
 	gcc  -o $(EXML_ESCAPE_OUT)  $(EXML_ESCAPE_IN) $(CFLAGS_DARWIN)
 
 shared_clean:
