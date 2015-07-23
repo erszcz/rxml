@@ -62,3 +62,7 @@ shared_event_d: $(EXML_EVENT_IN)
 shared_escape_d:  $(EXML_ESCAPE)
 	gcc  -o $(EXML_ESCAPE_OUT)  $(EXML_ESCAPE_IN) $(CFLAGS_DARWIN)
 
+shared_clean:
+	rm XML_EVENT_OUT
+	rm XML_ESCAPE_OUT
+
