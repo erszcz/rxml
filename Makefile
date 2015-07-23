@@ -2,7 +2,6 @@
 INCLUDE_FILES=$(shell escript tools/get_included_files_h.erl)
 CFLAGS =-undefined dynamic_lookup -fPIC $(INCLUDE_FILES)
 LDFLAGS =-fPIC -lexpat
-EXML_UTILS=c_src/exml_utils.c
 EXML_EVENT_IN=c_src/exml_event.c
 EXML_EVENT_OUT=priv/exml_event.so
 EXML_ESCAPE_IN=c_src/exml_escape.c
@@ -52,9 +51,9 @@ dialyzer: erlang_plt exml_plt
 
 shared_libs: shared_event shared_escape
 
-shared_event: $(EXML_UTILS) $(EXML_EVENT_IN)
-	gcc  -o $(EXML_EVENT_OUT)  $(EXML_UTILS) $(EXML_EVENT_IN) $(CFLAGS) $(LDFLAGS)
+shared_event: $(EXML_EVENT_IN)
+	gcc  -o $(EXML_EVENT_OUT)  $(EXML_EVENT_IN) $(CFLAGS) $(LDFLAGS)
 
-shared_escape: $(EXML_UTILS) $(EXML_ESCAPE)
-	gcc  -o $(EXML_ESCAPE_OUT) $(EXML_UTILS) $(EXML_ESCAPE_IN) $(CFLAGS) $(LDFLAGS)
+shared_escape:  $(EXML_ESCAPE)
+	gcc  -o $(EXML_ESCAPE_OUT)  $(EXML_ESCAPE_IN) $(CFLAGS) $(LDFLAGS)
 
