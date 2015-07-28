@@ -1,11 +1,14 @@
 .PHONY: rel deps test
 INCLUDE_FILES=$(shell escript tools/get_included_files_h.erl)
-CFLAGS_LINUX = -shared -fPIC -lexpat $(INCLUDE_FILES)
-CFLAGS_DARWIN = -undefined dynamic_lookup -lexpat -fPIC $(INCLUDE_FILES)
-EXML_EVENT_IN=c_src/exml_event.c
-EXML_EVENT_OUT=priv/exml_event.so
-EXML_ESCAPE_IN=c_src/exml_escape.c
-EXML_ESCAPE_OUT=priv/exml_escape.so
+CFLAGS_LINUX = -shared
+CFLAGS_DARWIN = -undefined dynamic_lookup
+CFLAGS_REST = -lexpat -fPIC
+ifeq ($(shell uname), Darwin)
+	CFLAGS = $(CFLAGS_DARWIN) $(INCLUDE_FILES) $(CFLAGS_REST)
+else
+	CFLAGS = $(CFLAGS_LINUX) $(INCLUDE_FILES) $(CFLAGS_REST)
+endif
+SO = priv/exml_event.so priv/exml_escape.so
 
 all: deps compile
 
@@ -48,24 +51,12 @@ dialyzer: erlang_plt exml_plt
 	@dialyzer --plts dialyzer/*.plt --no_check_plt \
 	--get_warnings -o dialyzer/error.log ebin
 
+shared_libs: $(SO)
 
-shared_libs_linux: shared_event_l shared_escape_l
-shared_libs_darwin: shared_event_d shared_escape_d
-
-priv:
-	mkdir priv
-
-shared_event_l: priv $(EXML_EVENT_IN)
-	gcc  -o $(EXML_EVENT_OUT)  $(EXML_EVENT_IN) $(CFLAGS_LINUX)
-shared_escape_l: priv $(EXML_ESCAPE)
-	gcc  -o $(EXML_ESCAPE_OUT)  $(EXML_ESCAPE_IN) $(CFLAGS_LINUX)
-
-shared_event_d: priv $(EXML_EVENT_IN)
-	gcc  -o $(EXML_EVENT_OUT)  $(EXML_EVENT_IN) $(CFLAGS_DARWIN)
-shared_escape_d: priv $(EXML_ESCAPE)
-	gcc  -o $(EXML_ESCAPE_OUT)  $(EXML_ESCAPE_IN) $(CFLAGS_DARWIN)
+priv/%.so: c_src/%.c
+	@mkdir -p priv
+	cc $(CFLAGS) -o $@ $^
 
 shared_clean:
-	rm XML_EVENT_OUT
-	rm XML_ESCAPE_OUT
-
+	-rm $(SO)
+	-rm -r priv
