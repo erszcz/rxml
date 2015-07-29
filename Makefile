@@ -55,7 +55,7 @@ shared_libs: $(SO)
 
 priv/%.so: c_src/%.c
 	@mkdir -p priv
-	cc $(CFLAGS) -o $@ $^
+	cc -o $@ $^ $(CFLAGS)
 
 shared_clean:
 	-rm $(SO)
