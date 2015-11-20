@@ -8,7 +8,8 @@ ifeq ($(shell uname), Darwin)
 else
 	CFLAGS = $(CFLAGS_LINUX) $(INCLUDE_FILES) $(CFLAGS_REST)
 endif
-SO = priv/exml_event.so priv/exml_escape.so
+SO = priv/librxml.so
+SO_TARGET ?= debug
 
 all: deps compile
 
@@ -53,9 +54,12 @@ dialyzer: erlang_plt exml_plt
 
 shared_libs: $(SO)
 
-priv/%.so: c_src/%.c
+priv/librxml.so: rust_src/target/$(SO_TARGET)/librxml.so
 	@mkdir -p priv
-	cc -o $@ $^ $(CFLAGS)
+	cp $< $@
+
+rust_src/target/$(SO_TARGET)/librxml.so:
+	cd rust_src && cargo build
 
 shared_clean:
 	-rm $(SO)

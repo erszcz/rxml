@@ -1,0 +1,11 @@
+[package]
+name = "rxml"
+version = "0.1.0"
+authors = ["Radek Szymczyszyn <lavrin@gmail.com>"]
+
+[dependencies]
+ruster_unsafe = "0.2.0"
+
+[lib]
+name = "rxml"
+crate-type = ["dylib"]
