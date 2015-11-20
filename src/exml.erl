@@ -15,19 +15,14 @@
          to_pretty_iolist/1, to_pretty_iolist/3]).
 -export([escape_attr/1, unescape_attr/1,
          escape_cdata/1, unescape_cdata/1, unescape_cdata_as/2]).
+
 -on_load(load/0).
 
 -spec load() -> any().
 load() ->
-    PrivDir = case code:priv_dir(?MODULE) of
-                  {error, _} ->
-                      EbinDir = filename:dirname(code:which(?MODULE)),
-                      AppPath = filename:dirname(EbinDir),
-                      filename:join(AppPath, "priv");
-                  Path ->
-                      Path
-              end,
-    erlang:load_nif(filename:join(PrivDir, "exml_escape"), none).
+    %% force loading of native extensions
+    {module, _} = code:ensure_loaded(rxml_native),
+    ok.
 
 -spec to_list(#xmlstreamstart{} | #xmlstreamend{}
               | xmlterm()) -> string().
@@ -117,23 +112,15 @@ parse(XML) ->
 
 -spec escape_cdata(iodata()) -> #xmlcdata{}.
 escape_cdata(Content) ->
-    #xmlcdata{content = escape_cdata_nif(Content)}.
+    #xmlcdata{content = rxml_native:escape_cdata_nif(Content)}.
 
 -spec unescape_cdata(#xmlcdata{}) -> binary().
 unescape_cdata(#xmlcdata{content = Content}) ->
-    unescape_cdata_nif(Content).
+    rxml_native:unescape_cdata_nif(Content).
 
 -spec unescape_cdata_as(binary|list|iodata, #xmlcdata{}) -> binary().
 unescape_cdata_as(What, CData) ->
     unescape_cdata_as_erl(What, CData).
-
--spec escape_cdata_nif(iodata()) -> binary().
-escape_cdata_nif(_Data) ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
--spec unescape_cdata_nif(iodata()) -> binary().
-unescape_cdata_nif(_Data) ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
 
 -spec unescape_cdata_as_erl(binary|list|iodata, #xmlcdata{}) -> binary().
 unescape_cdata_as_erl(What, #xmlcdata{content=GtEsc}) ->
@@ -144,17 +131,8 @@ unescape_cdata_as_erl(What, #xmlcdata{content=GtEsc}) ->
 
 -spec escape_attr(binary()) -> binary().
 escape_attr(Text) ->
-    escape_attr_nif(Text).
+    rxml_native:escape_attr_nif(Text).
 
 -spec unescape_attr(binary()) -> binary().
 unescape_attr(Text) ->
-    unescape_attr_nif(Text).
-
--spec escape_attr_nif(binary()) -> binary().
-escape_attr_nif(_Data) ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
--spec unescape_attr_nif(binary()) -> binary().
-unescape_attr_nif(_Data) ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
+    rxml_native:unescape_attr_nif(Text).
