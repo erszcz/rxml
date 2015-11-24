@@ -3,7 +3,8 @@
 %% test
 -export([static_atom/0,
          native_add/2,
-         tuple_add/1]).
+         tuple_add/1,
+         print_binary/1]).
 
 %% exml.erl
 -export([escape_cdata_nif/1,
@@ -42,6 +43,9 @@ native_add(_A, _B) ->
     erlang:nif_error({?MODULE, nif_not_loaded}).
 
 tuple_add({_A, _B}) ->
+    erlang:nif_error({?MODULE, nif_not_loaded}).
+
+print_binary(_) ->
     erlang:nif_error({?MODULE, nif_not_loaded}).
 
 %%

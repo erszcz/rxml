@@ -10,9 +10,10 @@ nif_init!( b"rxml_native\0",
            Some(upgrade),
            Some(unload),
            // test
-           nif!(b"static_atom\0", 0, static_atom),
-           nif!(b"native_add\0" , 2, native_add, ERL_NIF_DIRTY_JOB_IO_BOUND),
-           nif!(b"tuple_add\0"  , 1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
+           nif!(b"static_atom\0",  0, static_atom),
+           nif!(b"native_add\0",   2, native_add, ERL_NIF_DIRTY_JOB_IO_BOUND),
+           nif!(b"tuple_add\0",    1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
+           nif!(b"print_binary\0", 1, print_binary)
            // exml.erl
            nif!(b"new_parser\0", 0, new_parser) );
 
@@ -101,6 +102,17 @@ extern "C" fn tuple_add(env: *mut ErlNifEnv,
         else {
             enif_make_badarg(env)
         }
+    }
+}
+
+extern "C"
+fn print_binary(env: *mut ErlNifEnv,
+                argc: c_int,
+                args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+    assert!(argc == 1);
+    unsafe {
+        let mut bin: ErlNifBinary = uninitialized();
+        OK
     }
 }
 
