@@ -15,7 +15,8 @@ nif_init!( b"rxml_native\0",
            nif!(b"tuple_add\0",    1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
            nif!(b"print_binary\0", 1, print_binary)
            // exml.erl
-           nif!(b"new_parser\0", 0, new_parser) );
+           //nif!(b"new_parser\0", 0, new_parser)
+         );
 
 // test
 static mut my_atom:ERL_NIF_TERM = 0 as ERL_NIF_TERM;

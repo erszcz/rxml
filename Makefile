@@ -54,12 +54,27 @@ dialyzer: erlang_plt exml_plt
 
 shared_libs: $(SO)
 
-priv/librxml.so: rust_src/target/$(SO_TARGET)/librxml.so
+ifeq ($(shell uname), Darwin)
+PLATFORM_SO := dylib
+else
+PLATFORM_SO := so
+endif
+
+priv/librxml.so: rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO)
 	@mkdir -p priv
 	cp $< $@
 
-rust_src/target/$(SO_TARGET)/librxml.so:
+ifeq ($(shell uname), Darwin)
+L_ERL_INTERFACE := $(wildcard $(dir $(subst /bin/erl,,$(shell which erl)))/lib/erl_interface-*)/lib
+
+rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO):
+	cd rust_src && \
+		cargo rustc -- -L $(L_ERL_INTERFACE) \
+			-l erl_interface -l ei -C link-args='-flat_namespace -undefined suppress'
+else
+rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO):
 	cd rust_src && cargo build
+endif
 
 shared_clean:
 	-rm $(SO)
