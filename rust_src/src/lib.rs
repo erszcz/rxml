@@ -13,7 +13,8 @@ nif_init!( b"rxml_native\0",
            nif!(b"static_atom\0",  0, static_atom),
            nif!(b"native_add\0",   2, native_add, ERL_NIF_DIRTY_JOB_IO_BOUND),
            nif!(b"tuple_add\0",    1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
-           nif!(b"print_binary\0", 1, print_binary)
+           nif!(b"print_binary\0", 1, print_binary),
+           nif!(b"test\0", 0, test)
            // exml.erl
            //nif!(b"new_parser\0", 0, new_parser)
          );
@@ -115,6 +116,14 @@ fn print_binary(env: *mut ErlNifEnv,
         let mut bin: ErlNifBinary = uninitialized();
         OK
     }
+}
+
+extern "C"
+fn test(env: *mut ErlNifEnv,
+        argc: c_int,
+        args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+    assert!(argc == 0);
+    unsafe { OK }
 }
 
 /// Create a new XML parser.
