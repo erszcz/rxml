@@ -64,16 +64,16 @@ priv/librxml.so: rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO)
 	@mkdir -p priv
 	cp $< $@
 
+
 ifeq ($(shell uname), Darwin)
 L_ERL_INTERFACE := $(wildcard $(dir $(subst /bin/erl,,$(shell which erl)))/lib/erl_interface-*)/lib
-
-rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO):
+rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO): $(wildcard rust_src/src/*.rs)
 	cd rust_src && \
 		cargo rustc -- -L $(L_ERL_INTERFACE) \
 			-l erl_interface -l ei \
 			-C link-args='-flat_namespace -undefined suppress' > build.log 2>&1
 else
-rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO):
+rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO): $(wildcard rust_src/src/*.rs)
 	cd rust_src && cargo build > build.log 2>&1
 endif
 
