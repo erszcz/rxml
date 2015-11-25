@@ -120,8 +120,9 @@ fn print_binary(env: *mut ErlNifEnv,
 extern "C" fn new_parser(env: *mut ErlNifEnv,
                          argc: c_int,
                          args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
-    let mut fake_parser: ErlNifBinary = uninitialized();
-    enif_alloc_binary(12, &fake_parser);
-    fake_parser
-    enif_make_binary(env, b"fake_parser\0" as *const u8)
+    //let mut fake_parser: ErlNifBinary = uninitialized();
+    //enif_alloc_binary(12, &fake_parser);
+    //fake_parser
+    //enif_make_binary(env, b"fake_parser\0" as *const u8)
+    unsafe { OK }
 }
