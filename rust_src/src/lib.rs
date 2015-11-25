@@ -22,25 +22,16 @@ nif_init!( b"rxml_native\0",
 // test
 static mut my_atom:ERL_NIF_TERM = 0 as ERL_NIF_TERM;
 
-static mut XML_ELEMENT_START: ERL_NIF_TERM = 0 as ERL_NIF_TERM;
-static mut XML_ELEMENT_END  : ERL_NIF_TERM = 0 as ERL_NIF_TERM;
-static mut XML_CDATA        : ERL_NIF_TERM = 0 as ERL_NIF_TERM;
-static mut OK               : ERL_NIF_TERM = 0 as ERL_NIF_TERM;
-static mut NONE             : ERL_NIF_TERM = 0 as ERL_NIF_TERM;
-static mut ERROR            : ERL_NIF_TERM = 0 as ERL_NIF_TERM;
+macro_rules! ok     { ($env:expr) => ({ atom($env, b"ok") }) }
+macro_rules! error  { ($env:expr) => ({ atom($env, b"error") }) }
+macro_rules! none   { ($env:expr) => ({ atom($env, b"none") }) }
 
 /// Initialize global constants.
 extern "C" fn load(env: *mut ErlNifEnv,
                    _priv_data: *mut *mut c_void,
                    _load_info: ERL_NIF_TERM)-> c_int {
     unsafe {
-        my_atom           = enif_make_atom(env, b"static atom from Rust\0" as *const u8);
-        XML_ELEMENT_START = enif_make_atom(env, b"xml_element_start\0" as *const u8);
-        XML_ELEMENT_END   = enif_make_atom(env, b"xml_element_end\0" as *const u8);
-        XML_CDATA         = enif_make_atom(env, b"xml_cdata\0" as *const u8);
-        OK                = enif_make_atom(env, b"ok\0" as *const u8);
-        NONE              = enif_make_atom(env, b"none\0" as *const u8);
-        ERROR             = enif_make_atom(env, b"error\0" as *const u8);
+        my_atom = enif_make_atom(env, b"static atom from Rust\0" as *const u8);
         0
     }
 }
@@ -120,7 +111,7 @@ fn print_binary(env: *mut ErlNifEnv,
         bin
     };
     //println!("{:?}", bin);
-    unsafe { OK }
+    ok!(env)
 }
 
 extern "C"
@@ -128,7 +119,7 @@ fn test(env: *mut ErlNifEnv,
         argc: c_int,
         args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 0);
-    unsafe { OK }
+    ok!(env)
 }
 
 /// Create a new XML parser.
@@ -139,7 +130,12 @@ extern "C" fn new_parser(env: *mut ErlNifEnv,
     //enif_alloc_binary(12, &fake_parser);
     //fake_parser
     //enif_make_binary(env, b"fake_parser\0" as *const u8)
-    unsafe { OK }
+    ok!(env)
+}
+
+#[allow(dead_code)]
+fn atom(env: *mut ErlNifEnv, a: &[u8]) -> ERL_NIF_TERM {
+    unsafe { enif_make_atom(env, a.as_ptr()) }
 }
 
 // Roughly inspired by:
