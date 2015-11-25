@@ -140,6 +140,6 @@ fn atom(env: *mut ErlNifEnv, a: &[u8]) -> ERL_NIF_TERM {
 
 // Roughly inspired by:
 // https://github.com/rust-lang/rust/blob/e3dfb2c45fa3a2da312fc2dbc36aa0c3a06319eb/src/libstd/sys/unix/mod.rs#L91-L98
-fn c_bool(t: i32) -> bool {
+fn c_bool(t: c_int) -> bool {
     if t != 0 { true } else { false }
 }
