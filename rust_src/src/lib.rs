@@ -112,10 +112,15 @@ fn print_binary(env: *mut ErlNifEnv,
                 argc: c_int,
                 args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 1);
-    unsafe {
+    let bin = unsafe {
         let mut bin: ErlNifBinary = uninitialized();
-        OK
-    }
+        if c_bool(enif_inspect_binary(env, *args.offset(1), &mut bin)) {
+            return enif_make_badarg(env)
+        }
+        bin
+    };
+    //println!("{:?}", bin);
+    unsafe { OK }
 }
 
 extern "C"
@@ -135,4 +140,10 @@ extern "C" fn new_parser(env: *mut ErlNifEnv,
     //fake_parser
     //enif_make_binary(env, b"fake_parser\0" as *const u8)
     unsafe { OK }
+}
+
+// Roughly inspired by:
+// https://github.com/rust-lang/rust/blob/e3dfb2c45fa3a2da312fc2dbc36aa0c3a06319eb/src/libstd/sys/unix/mod.rs#L91-L98
+fn c_bool(t: i32) -> bool {
+    if t != 0 { true } else { false }
 }
