@@ -70,10 +70,11 @@ L_ERL_INTERFACE := $(wildcard $(dir $(subst /bin/erl,,$(shell which erl)))/lib/e
 rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO):
 	cd rust_src && \
 		cargo rustc -- -L $(L_ERL_INTERFACE) \
-			-l erl_interface -l ei -C link-args='-flat_namespace -undefined suppress'
+			-l erl_interface -l ei \
+			-C link-args='-flat_namespace -undefined suppress' > build.log 2>&1
 else
 rust_src/target/$(SO_TARGET)/librxml.$(PLATFORM_SO):
-	cd rust_src && cargo build
+	cd rust_src && cargo build > build.log 2>&1
 endif
 
 shared_clean:
