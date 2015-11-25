@@ -2,6 +2,7 @@
 name = "rxml"
 version = "0.1.0"
 dependencies = [
+ "libc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "ruster_unsafe 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

@@ -1,5 +1,7 @@
-#[macro_use]
-extern crate ruster_unsafe;
+extern crate libc;
+#[macro_use] extern crate ruster_unsafe;
+
+use libc::c_uint;
 use ruster_unsafe::*;
 use std::mem::uninitialized;
 
@@ -14,7 +16,8 @@ nif_init!( b"rxml_native\0",
            nif!(b"native_add\0",   2, native_add, ERL_NIF_DIRTY_JOB_IO_BOUND),
            nif!(b"tuple_add\0",    1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
            nif!(b"print_binary\0", 1, print_binary),
-           nif!(b"test\0", 0, test)
+           nif!(b"test\0", 0, test),
+           nif!(b"tuple\0", 0, tuple)
            // exml.erl
            //nif!(b"new_parser\0", 0, new_parser)
          );
@@ -120,6 +123,19 @@ fn test(env: *mut ErlNifEnv,
         args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 0);
     ok!(env)
+}
+
+extern "C"
+fn tuple(env: *mut ErlNifEnv,
+         argc: c_int,
+         args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+    assert!(argc == 0);
+    let ok = ok!(env);
+    let error = none!(env);
+    let arr = [ok, error];
+    unsafe {
+        enif_make_tuple_from_array(env, arr.as_ptr(), arr.len() as c_uint)
+    }
 }
 
 /// Create a new XML parser.
