@@ -25,9 +25,22 @@ nif_init!( b"rxml_native\0",
 // test
 static mut my_atom:ERL_NIF_TERM = 0 as ERL_NIF_TERM;
 
-macro_rules! ok     { ($env:expr) => ({ atom($env, b"ok") }) }
-macro_rules! error  { ($env:expr) => ({ atom($env, b"error") }) }
-macro_rules! none   { ($env:expr) => ({ atom($env, b"none") }) }
+mod atom {
+
+    macro_rules! define { ($atom:ident) => {
+        #[inline]
+        pub fn $atom(env: *mut ::ruster_unsafe::ErlNifEnv) -> ::ruster_unsafe::ERL_NIF_TERM {
+            unsafe {
+                ::ruster_unsafe::enif_make_atom(env, b"$atom" as *const u8)
+            }
+        }
+    } }
+
+    define!(error);
+    define!(none);
+    define!(ok);
+
+}
 
 /// Initialize global constants.
 extern "C" fn load(env: *mut ErlNifEnv,
@@ -114,7 +127,7 @@ fn print_binary(env: *mut ErlNifEnv,
         bin
     };
     //println!("{:?}", bin);
-    ok!(env)
+    atom::ok(env)
 }
 
 extern "C"
@@ -122,7 +135,7 @@ fn test(env: *mut ErlNifEnv,
         argc: c_int,
         args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 0);
-    ok!(env)
+    atom::ok(env)
 }
 
 extern "C"
@@ -130,9 +143,7 @@ fn tuple(env: *mut ErlNifEnv,
          argc: c_int,
          args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 0);
-    let ok = ok!(env);
-    let error = none!(env);
-    let arr = [ok, error];
+    let arr = [atom::ok(env), atom::error(env)];
     unsafe {
         enif_make_tuple_from_array(env, arr.as_ptr(), arr.len() as c_uint)
     }
@@ -146,7 +157,7 @@ extern "C" fn new_parser(env: *mut ErlNifEnv,
     //enif_alloc_binary(12, &fake_parser);
     //fake_parser
     //enif_make_binary(env, b"fake_parser\0" as *const u8)
-    ok!(env)
+    atom::ok(env)
 }
 
 #[allow(dead_code)]
