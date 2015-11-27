@@ -12,7 +12,6 @@ nif_init!( b"rxml_native\0",
            Some(upgrade),
            Some(unload),
            // test
-           nif!(b"static_atom\0",  0, static_atom),
            nif!(b"native_add\0",   2, native_add, ERL_NIF_DIRTY_JOB_IO_BOUND),
            nif!(b"tuple_add\0",    1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
            nif!(b"print_binary\0", 1, print_binary),
@@ -21,9 +20,6 @@ nif_init!( b"rxml_native\0",
            // exml.erl
            //nif!(b"new_parser\0", 0, new_parser)
          );
-
-// test
-static mut my_atom:ERL_NIF_TERM = 0 as ERL_NIF_TERM;
 
 mod atom {
 
@@ -45,12 +41,7 @@ mod atom {
 /// Initialize global constants.
 extern "C" fn load(env: *mut ErlNifEnv,
                    _priv_data: *mut *mut c_void,
-                   _load_info: ERL_NIF_TERM)-> c_int {
-    unsafe {
-        my_atom = enif_make_atom(env, b"static atom from Rust\0" as *const u8);
-        0
-    }
-}
+                   _load_info: ERL_NIF_TERM)-> c_int { 0 }
 
 /// Does nothing, reports success
 extern "C" fn reload(_env: *mut ErlNifEnv,
@@ -67,12 +58,6 @@ extern "C" fn upgrade(_env: *mut ErlNifEnv,
 extern "C" fn unload(_env: *mut ErlNifEnv,
                      _priv_data: *mut c_void) {}
 
-/// Provide static atom that was initialized by `load()`
-extern "C" fn static_atom(_env:*mut ErlNifEnv,
-                          _argc: c_int,
-                          _args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
-    unsafe { my_atom }
-}
 
 /// Add two integers. `native_add(A,B) -> A+B.`
 extern "C" fn native_add(env: *mut ErlNifEnv,

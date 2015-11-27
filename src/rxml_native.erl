@@ -1,8 +1,7 @@
 -module(rxml_native).
 
 %% test
--export([static_atom/0,
-         native_add/2,
+-export([native_add/2,
          tuple_add/1,
          print_binary/1,
          test/0,
@@ -37,9 +36,6 @@ load() ->
 %%
 %% test
 %%
-
-static_atom() ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
 
 native_add(_A, _B) ->
     erlang:nif_error({?MODULE, nif_not_loaded}).
