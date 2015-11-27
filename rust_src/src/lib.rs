@@ -17,7 +17,8 @@ nif_init!( b"rxml_native\0",
            nif!(b"print_binary\0", 1, print_binary),
            nif!(b"test\0", 0, test),
            nif!(b"tuple\0", 0, tuple),
-           nif!(b"test_badarg\0", 0, test_badarg)
+           nif!(b"test_badarg\0", 0, test_badarg),
+           nif!(b"test_badarity\0", 0, test_badarity)
 
            // exml.erl
            //nif!(b"new_parser\0", 0, new_parser)
@@ -35,6 +36,7 @@ mod atom {
     } }
 
     define!(badarg);
+    define!(badarity);
     define!(error);
     define!(none);
     define!(ok);
@@ -86,6 +88,15 @@ fn test_badarg(env: *mut ErlNifEnv,
                args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     unsafe {
         enif_raise_exception(env, atom::badarg(env))
+    }
+}
+
+extern "C"
+fn test_badarity(env: *mut ErlNifEnv,
+                 argc: c_int,
+                 args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+    unsafe {
+        enif_raise_exception(env, atom::badarity(env))
     }
 }
 
