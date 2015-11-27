@@ -24,13 +24,19 @@ nif_init!( b"rxml_native\0",
            //nif!(b"new_parser\0", 0, new_parser)
          );
 
+static mut NIF_INTERNAL_ERROR: ERL_NIF_TERM = 0 as ERL_NIF_TERM;
+
 mod atom {
 
     macro_rules! define { ($atom:ident) => {
         #[inline]
         pub fn $atom(env: *mut ::ruster_unsafe::ErlNifEnv) -> ::ruster_unsafe::ERL_NIF_TERM {
             unsafe {
-                ::ruster_unsafe::enif_make_atom(env, b"$atom" as *const u8)
+                if let Ok (atom) = ::std::ffi::CString::new(stringify!($atom)) {
+                    ::ruster_unsafe::enif_make_atom(env, atom.as_ptr() as *const u8)
+                } else {
+                    super::NIF_INTERNAL_ERROR
+                }
             }
         }
     } }
@@ -46,7 +52,10 @@ mod atom {
 /// Initialize global constants.
 extern "C" fn load(env: *mut ErlNifEnv,
                    _priv_data: *mut *mut c_void,
-                   _load_info: ERL_NIF_TERM)-> c_int { 0 }
+                   _load_info: ERL_NIF_TERM)-> c_int {
+    unsafe { NIF_INTERNAL_ERROR = enif_make_atom(env, b"error\0" as *const u8) }
+    0
+}
 
 /// Does nothing, reports success
 extern "C" fn reload(_env: *mut ErlNifEnv,
