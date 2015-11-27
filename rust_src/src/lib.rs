@@ -16,7 +16,9 @@ nif_init!( b"rxml_native\0",
            nif!(b"tuple_add\0",    1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
            nif!(b"print_binary\0", 1, print_binary),
            nif!(b"test\0", 0, test),
-           nif!(b"tuple\0", 0, tuple)
+           nif!(b"tuple\0", 0, tuple),
+           nif!(b"test_badarg\0", 0, test_badarg)
+
            // exml.erl
            //nif!(b"new_parser\0", 0, new_parser)
          );
@@ -32,6 +34,7 @@ mod atom {
         }
     } }
 
+    define!(badarg);
     define!(error);
     define!(none);
     define!(ok);
@@ -74,6 +77,15 @@ extern "C" fn native_add(env: *mut ErlNifEnv,
          else {
             enif_make_badarg(env)
          }
+    }
+}
+
+extern "C"
+fn test_badarg(env: *mut ErlNifEnv,
+               argc: c_int,
+               args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+    unsafe {
+        enif_raise_exception(env, atom::badarg(env))
     }
 }
 

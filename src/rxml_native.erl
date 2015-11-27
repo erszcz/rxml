@@ -5,7 +5,8 @@
          tuple_add/1,
          print_binary/1,
          test/0,
-         tuple/0]).
+         tuple/0,
+         test_badarg/0]).
 
 %% exml.erl
 -export([escape_cdata_nif/1,
@@ -50,6 +51,9 @@ test() ->
     erlang:nif_error({?MODULE, nif_not_loaded}).
 
 tuple() ->
+    erlang:nif_error({?MODULE, nif_not_loaded}).
+
+test_badarg() ->
     erlang:nif_error({?MODULE, nif_not_loaded}).
 
 %%
