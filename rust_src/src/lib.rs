@@ -277,11 +277,9 @@ fn parse_nif(env: *mut ErlNifEnv,
     for ev in parser {
         match ev {
             Ok (xml::reader::XmlEvent::StartElement { name, .. }) =>
-                events.push( (atom::xml_element_start(env),
-                              Binary::from_string(env, &name.local_name)) ),
+                events.push( atom::xml_element_start(env) ),
             Ok (xml::reader::XmlEvent::EndElement { name, .. }) =>
-                events.push( (atom::xml_element_start(env),
-                              Binary::from_string(env, &name.local_name)) ),
+                events.push( atom::xml_element_start(env) ),
             Err (e) => break,
             _ => {}
         }
