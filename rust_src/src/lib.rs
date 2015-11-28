@@ -182,6 +182,7 @@ impl Binary {
             if !is_enif_ok(enif_alloc_binary(s.len(), &mut b)) {
                 fail!(Error::EnifAllocBinary(env))
             }
+            std::ptr::copy_nonoverlapping(s.as_ptr(), b.data as *mut u8, s.len());
             b
         };
         Ok (Binary { nif_binary: bin, allocated: true })
