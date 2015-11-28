@@ -3,6 +3,7 @@ extern crate libc;
 
 use libc::c_uint;
 use ruster_unsafe::*;
+use std::fmt::{ Debug, Error as FormatError, Formatter };
 use std::mem::uninitialized;
 
 /// Create NIF module data and init function.
@@ -166,10 +167,21 @@ fn unpack_binary(env: *mut ErlNifEnv, i: isize, args: *const ERL_NIF_TERM)
     unsafe {
         let arg = *args.offset(i);
         let mut bin: ErlNifBinary = uninitialized();
-        if c_bool(enif_inspect_binary(env, arg, &mut bin)) {
+        if !c_bool(enif_inspect_binary(env, arg, &mut bin)) {
             fail!(Error::BadArg(env))
         }
         Ok (bin)
+    }
+}
+
+struct Binary(ErlNifBinary);
+
+impl Debug for Binary {
+    fn fmt(&self, formatter: &mut Formatter) -> Result<(), FormatError> {
+        let &Binary(ref bin) = self;
+        let s = unsafe { std::slice::from_raw_parts(bin.data, bin.size) };
+        try!(formatter.write_str(&format!("ErlNifBinary{:?}", s)));
+        Ok (())
     }
 }
 
@@ -178,8 +190,8 @@ fn print_binary(env: *mut ErlNifEnv,
                 argc: c_int,
                 args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 1);
-    let bin = nif_try!(unpack_binary(env, 1, args));
-    //println!("{:?}", bin);
+    let bin = nif_try!(unpack_binary(env, 0, args));
+    println!("{:?}", Binary(bin));
     atom::ok(env)
 }
 
