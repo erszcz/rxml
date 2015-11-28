@@ -293,7 +293,7 @@ fn parse_nif(env: *mut ErlNifEnv,
     let mut events: Vec<ERL_NIF_TERM> = vec![];
     for ev in parser {
         match ev {
-            // TODO: Suboptimal! Here binaries should be put on a stack...
+            // TODO: Suboptimal! Binaries should be put on a stack here...
             Ok (XMLEvent::StartElement { name, .. }) => {
                 let bname = nif_try!(Binary::from_string(env, &name.local_name)
                                             .and_then(|b| b.to_term(env)));
