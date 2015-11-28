@@ -178,11 +178,16 @@ fn unpack_binary(env: *mut ErlNifEnv, i: isize, args: *const ERL_NIF_TERM)
 
 struct Binary(ErlNifBinary);
 
+impl Binary {
+    fn as_slice(&self) -> &[u8] {
+        let &Binary(ref bin) = self;
+        unsafe { std::slice::from_raw_parts(bin.data, bin.size) }
+    }
+}
+
 impl Debug for Binary {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), FormatError> {
-        let &Binary(ref bin) = self;
-        let s = unsafe { std::slice::from_raw_parts(bin.data, bin.size) };
-        try!(formatter.write_str(&format!("ErlNifBinary{:?}", s)));
+        try!(formatter.write_str(&format!("ErlNifBinary{:?}", self.as_slice())));
         Ok (())
     }
 }
