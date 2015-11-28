@@ -47,6 +47,7 @@ mod atom {
 
     define!(badarg);
     define!(badarity);
+    define!(enif_alloc_binary);
     define!(error);
     define!(none);
     define!(ok);
@@ -58,14 +59,16 @@ mod atom {
 
 pub enum Error {
     BadArg (*mut ErlNifEnv),
-    BadArity (*mut ErlNifEnv)
+    BadArity (*mut ErlNifEnv),
+    EnifAllocBinary (*mut ErlNifEnv)
 }
 
 impl From<Error> for ERL_NIF_TERM {
     fn from(e: Error) -> ERL_NIF_TERM {
         let (env, reason) = match e {
             Error::BadArg(env) => (env, atom::badarg(env)),
-            Error::BadArity(env) => (env, atom::badarity(env))
+            Error::BadArity(env) => (env, atom::badarity(env)),
+            Error::EnifAllocBinary(env) => (env, atom::enif_alloc_binary(env))
         };
         unsafe { enif_raise_exception(env, reason) }
     }
@@ -166,8 +169,9 @@ extern "C" fn tuple_add(env: *mut ErlNifEnv,
     }
 }
 
+// TODO: Binary::from_term
 fn unpack_binary(env: *mut ErlNifEnv, i: isize, args: *const ERL_NIF_TERM)
-    -> Result<ErlNifBinary, Error>
+    -> Result<Binary, Error>
 {
     unsafe {
         let arg = *args.offset(i);
@@ -175,16 +179,39 @@ fn unpack_binary(env: *mut ErlNifEnv, i: isize, args: *const ERL_NIF_TERM)
         if !c_bool(enif_inspect_binary(env, arg, &mut bin)) {
             fail!(Error::BadArg(env))
         }
-        Ok (bin)
+        Ok (Binary { nif_binary: bin, allocated: false })
     }
 }
 
-struct Binary(ErlNifBinary);
+struct Binary {
+    nif_binary: ErlNifBinary,
+    allocated: bool
+}
 
 impl Binary {
+
+    fn from_string(env: *mut ErlNifEnv, s: &str) -> Result<Binary, Error> {
+        let bin = unsafe {
+            let mut b: ErlNifBinary = uninitialized();
+            if !c_bool(enif_alloc_binary(s.len(), &mut b)) {
+                fail!(Error::EnifAllocBinary(env))
+            }
+            b
+        };
+        Ok (Binary { nif_binary: bin, allocated: true })
+    }
+
     fn as_slice(&self) -> &[u8] {
-        let &Binary(ref bin) = self;
+        let &Binary { nif_binary: ref bin, .. } = self;
         unsafe { std::slice::from_raw_parts(bin.data, bin.size) }
+    }
+}
+
+impl Drop for Binary {
+    fn drop(&mut self) {
+        if self.allocated {
+            unsafe { enif_release_binary(&mut self.nif_binary) }
+        }
     }
 }
 
@@ -201,7 +228,7 @@ fn print_binary(env: *mut ErlNifEnv,
                 args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 1);
     let bin = nif_try!(unpack_binary(env, 0, args));
-    println!("{:?}", Binary(bin));
+    println!("{:?}", bin);
     atom::ok(env)
 }
 
@@ -243,7 +270,7 @@ fn parse_nif(env: *mut ErlNifEnv,
              argc: c_int,
              args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 3);
-    let bin = Binary(nif_try!(unpack_binary(env, 1, args)));
+    let bin = nif_try!(unpack_binary(env, 1, args));
     let buf = bin.as_slice();
     let parser = xml::EventReader::new(buf);
 
@@ -251,9 +278,11 @@ fn parse_nif(env: *mut ErlNifEnv,
     for ev in parser {
         match ev {
             Ok (xml::reader::XmlEvent::StartElement { name, .. }) =>
-                events.push(atom::xml_element_start(env)),
+                events.push( (atom::xml_element_start(env),
+                              Binary::from_string(env, &name.local_name)) ),
             Ok (xml::reader::XmlEvent::EndElement { name, .. }) =>
-                events.push(atom::xml_element_end(env)),
+                events.push( (atom::xml_element_start(env),
+                              Binary::from_string(env, &name.local_name)) ),
             Err (e) => break,
             _ => {}
         }
