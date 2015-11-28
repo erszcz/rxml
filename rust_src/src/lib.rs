@@ -48,7 +48,7 @@ mod atom {
     define!(badarg);
     define!(badarity);
     define!(badxml);
-    define!(enif_alloc_binary);
+    define!(enif_call_failed);
     define!(error);
     define!(none);
     define!(ok);
@@ -62,7 +62,7 @@ pub enum Error {
     BadArg (*mut ErlNifEnv),
     BadArity (*mut ErlNifEnv),
     BadXML (*mut ErlNifEnv),
-    EnifAllocBinary (*mut ErlNifEnv)
+    EnifCallFailed (*mut ErlNifEnv)
 }
 
 impl From<Error> for ERL_NIF_TERM {
@@ -71,7 +71,7 @@ impl From<Error> for ERL_NIF_TERM {
             Error::BadArg(env) => (env, atom::badarg(env)),
             Error::BadArity(env) => (env, atom::badarity(env)),
             Error::BadXML(env) => (env, atom::badxml(env)),
-            Error::EnifAllocBinary(env) => (env, atom::enif_alloc_binary(env))
+            Error::EnifCallFailed(env) => (env, atom::enif_call_failed(env))
         };
         unsafe { enif_raise_exception(env, reason) }
     }
@@ -183,7 +183,7 @@ impl Binary {
         let bin = unsafe {
             let mut b: ErlNifBinary = uninitialized();
             if !is_enif_ok(enif_alloc_binary(s.len(), &mut b)) {
-                fail!(Error::EnifAllocBinary(env))
+                fail!(Error::EnifCallFailed(env))
             }
             std::ptr::copy_nonoverlapping(s.as_ptr(), b.data as *mut u8, s.len());
             b
