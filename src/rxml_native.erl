@@ -96,7 +96,8 @@ reset_parser(Parser) ->
 free_parser(Parser) ->
     erlang:nif_error({?MODULE, nif_not_loaded}, [Parser]).
 
+%% Throws exceptions on errors.
 -spec parse_nif(exml_event:c_parser(), binary(), integer()) -> Result when
-      Result :: {ok, list()} | {error, string()}.
+      Result :: {ok, list()}.
 parse_nif(Parser, Data, Final) ->
     erlang:nif_error(not_loaded, [Parser, Data, Final]).

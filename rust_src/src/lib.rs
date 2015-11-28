@@ -1,5 +1,6 @@
 extern crate libc;
 #[macro_use] extern crate ruster_unsafe;
+extern crate xml;
 
 use libc::c_uint;
 use ruster_unsafe::*;
@@ -50,6 +51,8 @@ mod atom {
     define!(none);
     define!(ok);
     define!(unimplemented);
+    define!(xml_element_end);
+    define!(xml_element_start);
 
 }
 
@@ -232,12 +235,40 @@ extern "C" fn new_parser(env: *mut ErlNifEnv,
     atom::ok(env)
 }
 
+// Throws exceptions on errors.
+// -spec parse_nif(exml_event:c_parser(), binary(), integer()) -> Result when
+//       Result :: {ok, list()}.
 extern "C"
 fn parse_nif(env: *mut ErlNifEnv,
              argc: c_int,
              args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 3);
-    atom::unimplemented(env)
+    let bin = Binary(nif_try!(unpack_binary(env, 1, args)));
+    let buf = bin.as_slice();
+    let parser = xml::EventReader::new(buf);
+
+    let mut events = vec![];
+    for ev in parser {
+        match ev {
+            Ok (xml::reader::XmlEvent::StartElement { name, .. }) =>
+                events.push(atom::xml_element_start(env)),
+            Ok (xml::reader::XmlEvent::EndElement { name, .. }) =>
+                events.push(atom::xml_element_end(env)),
+            Err (e) => break,
+            _ => {}
+        }
+    }
+
+    unsafe {
+        enif_make_list_from_array(env, events.as_ptr() as *const ERL_NIF_TERM,
+                                  events.len() as c_uint)
+    }
+}
+
+fn indent(size: usize) -> String {
+    const INDENT: &'static str = "    ";
+    (0..size).map(|_| INDENT)
+        .fold(String::with_capacity(size * INDENT.len()), |r, s| r + s)
 }
 
 #[allow(dead_code)]
