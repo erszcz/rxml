@@ -209,6 +209,7 @@ impl Binary {
         unsafe { std::slice::from_raw_parts(bin.data, bin.size) }
     }
 
+    // TODO: May enif_make_binary fail? If so, we ought to return Result<>
     fn to_term(mut self, env: *mut ErlNifEnv) -> ERL_NIF_TERM {
         let term = unsafe { enif_make_binary(env, &mut self.nif_binary) };
         self.allocated = false;
