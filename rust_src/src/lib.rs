@@ -204,6 +204,13 @@ impl Binary {
         let &Binary { nif_binary: ref bin, .. } = self;
         unsafe { std::slice::from_raw_parts(bin.data, bin.size) }
     }
+
+    fn to_term(mut self, env: *mut ErlNifEnv) -> ERL_NIF_TERM {
+        let term = unsafe { enif_make_binary(env, &mut self.nif_binary) };
+        self.allocated = false;
+        term
+    }
+
 }
 
 impl Drop for Binary {
@@ -273,13 +280,15 @@ fn parse_nif(env: *mut ErlNifEnv,
     let buf = bin.as_slice();
     let parser = xml::EventReader::new(buf);
 
-    let mut events = vec![];
+    let mut events: Vec<ERL_NIF_TERM> = vec![];
     for ev in parser {
         match ev {
             Ok (xml::reader::XmlEvent::StartElement { name, .. }) =>
-                events.push( atom::xml_element_start(env) ),
+                // TODO: Suboptimal! Here binaries should be put on a stack...
+                events.push( nif_try!(Binary::from_string(env, &name.local_name)).to_term(env) ),
             Ok (xml::reader::XmlEvent::EndElement { name, .. }) =>
-                events.push( atom::xml_element_start(env) ),
+                // TODO: ...and popped off this stack here.
+                events.push( nif_try!(Binary::from_string(env, &name.local_name)).to_term(env) ),
             Err (e) => break,
             _ => {}
         }
