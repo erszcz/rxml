@@ -179,7 +179,7 @@ impl Binary {
     fn from_string(env: *mut ErlNifEnv, s: &str) -> Result<Binary, Error> {
         let bin = unsafe {
             let mut b: ErlNifBinary = uninitialized();
-            if !c_bool(enif_alloc_binary(s.len(), &mut b)) {
+            if !is_enif_ok(enif_alloc_binary(s.len(), &mut b)) {
                 fail!(Error::EnifAllocBinary(env))
             }
             b
@@ -193,7 +193,7 @@ impl Binary {
     fn from_term(env: *mut ErlNifEnv, arg: ERL_NIF_TERM) -> Result<Binary, Error> {
         unsafe {
             let mut bin: ErlNifBinary = uninitialized();
-            if !c_bool(enif_inspect_binary(env, arg, &mut bin)) {
+            if !is_enif_ok(enif_inspect_binary(env, arg, &mut bin)) {
                 fail!(Error::BadArg(env))
             }
             Ok (Binary { nif_binary: bin, allocated: false })
@@ -304,6 +304,6 @@ fn atom(env: *mut ErlNifEnv, a: &[u8]) -> ERL_NIF_TERM {
 
 // Roughly inspired by:
 // https://github.com/rust-lang/rust/blob/e3dfb2c45fa3a2da312fc2dbc36aa0c3a06319eb/src/libstd/sys/unix/mod.rs#L91-L98
-fn c_bool(t: c_int) -> bool {
+fn is_enif_ok(t: c_int) -> bool {
     if t != 0 { true } else { false }
 }
