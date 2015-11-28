@@ -57,9 +57,9 @@ pub enum Error {
 
 impl From<Error> for ERL_NIF_TERM {
     fn from(e: Error) -> ERL_NIF_TERM {
-        let reason = match e {
-            Error::BadArg(env) => atom::badarg(env),
-            Error::BadArity(env) => atom::badarity(env)
+        let (env, reason) = match e {
+            Error::BadArg(env) => (env, atom::badarg(env)),
+            Error::BadArity(env) => (env, atom::badarity(env))
         };
         unsafe { enif_raise_exception(env, reason) }
     }
