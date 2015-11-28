@@ -47,6 +47,7 @@ mod atom {
 
     define!(badarg);
     define!(badarity);
+    define!(badxml);
     define!(enif_alloc_binary);
     define!(error);
     define!(none);
@@ -60,6 +61,7 @@ mod atom {
 pub enum Error {
     BadArg (*mut ErlNifEnv),
     BadArity (*mut ErlNifEnv),
+    BadXML (*mut ErlNifEnv),
     EnifAllocBinary (*mut ErlNifEnv)
 }
 
@@ -68,6 +70,7 @@ impl From<Error> for ERL_NIF_TERM {
         let (env, reason) = match e {
             Error::BadArg(env) => (env, atom::badarg(env)),
             Error::BadArity(env) => (env, atom::badarity(env)),
+            Error::BadXML(env) => (env, atom::badxml(env)),
             Error::EnifAllocBinary(env) => (env, atom::enif_alloc_binary(env))
         };
         unsafe { enif_raise_exception(env, reason) }
@@ -290,7 +293,7 @@ fn parse_nif(env: *mut ErlNifEnv,
             Ok (xml::reader::XmlEvent::EndElement { name, .. }) =>
                 // TODO: ...and popped off this stack here.
                 events.push( nif_try!(Binary::from_string(env, &name.local_name)).to_term(env) ),
-            Err (e) => break,
+            Err (e) => nif_try!(Err (Error::BadXML(env))),
             _ => {}
         }
     }
