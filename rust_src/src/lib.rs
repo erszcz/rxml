@@ -169,20 +169,6 @@ extern "C" fn tuple_add(env: *mut ErlNifEnv,
     }
 }
 
-// TODO: Binary::from_term
-fn unpack_binary(env: *mut ErlNifEnv, i: isize, args: *const ERL_NIF_TERM)
-    -> Result<Binary, Error>
-{
-    unsafe {
-        let arg = *args.offset(i);
-        let mut bin: ErlNifBinary = uninitialized();
-        if !c_bool(enif_inspect_binary(env, arg, &mut bin)) {
-            fail!(Error::BadArg(env))
-        }
-        Ok (Binary { nif_binary: bin, allocated: false })
-    }
-}
-
 struct Binary {
     nif_binary: ErlNifBinary,
     allocated: bool
@@ -199,6 +185,19 @@ impl Binary {
             b
         };
         Ok (Binary { nif_binary: bin, allocated: true })
+    }
+
+    fn from_ith_arg(env: *mut ErlNifEnv, i: isize, args: *const ERL_NIF_TERM)
+        -> Result<Binary, Error> { unsafe { Self::from_term(env, *args.offset(i)) } }
+
+    fn from_term(env: *mut ErlNifEnv, arg: ERL_NIF_TERM) -> Result<Binary, Error> {
+        unsafe {
+            let mut bin: ErlNifBinary = uninitialized();
+            if !c_bool(enif_inspect_binary(env, arg, &mut bin)) {
+                fail!(Error::BadArg(env))
+            }
+            Ok (Binary { nif_binary: bin, allocated: false })
+        }
     }
 
     fn as_slice(&self) -> &[u8] {
@@ -227,7 +226,7 @@ fn print_binary(env: *mut ErlNifEnv,
                 argc: c_int,
                 args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 1);
-    let bin = nif_try!(unpack_binary(env, 0, args));
+    let bin = nif_try!(Binary::from_ith_arg(env, 0, args));
     println!("{:?}", bin);
     atom::ok(env)
 }
@@ -270,7 +269,7 @@ fn parse_nif(env: *mut ErlNifEnv,
              argc: c_int,
              args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 3);
-    let bin = nif_try!(unpack_binary(env, 1, args));
+    let bin = nif_try!(Binary::from_ith_arg(env, 1, args));
     let buf = bin.as_slice();
     let parser = xml::EventReader::new(buf);
 
