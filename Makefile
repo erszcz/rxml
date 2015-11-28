@@ -1,4 +1,4 @@
-.PHONY: rel deps test
+.PHONY: rel deps test shell
 INCLUDE_FILES=$(shell escript tools/get_included_files_h.erl)
 CFLAGS_LINUX = -shared
 CFLAGS_DARWIN = -undefined dynamic_lookup
@@ -80,3 +80,6 @@ endif
 shared_clean:
 	-rm $(SO)
 	-rm -r priv
+
+shell:
+	erl -sname rxml -pa ebin -pa deps/*/ebin
