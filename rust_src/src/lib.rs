@@ -305,6 +305,22 @@ fn parse_nif(env: *mut ErlNifEnv,
     }
 }
 
+struct Tuple<'a>(&'a [ERL_NIF_TERM]);
+
+impl<'a> Tuple<'a> {
+    fn to_term(&self, env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
+        let &Tuple(ref arr) = self;
+        unsafe {
+            let tuple = enif_make_tuple_from_array(env, arr.as_ptr(),
+                                                   arr.len() as c_uint);
+            if !is_enif_ok(tuple as c_int) {
+                fail!(Error::EnifCallFailed(env))
+            }
+            Ok (tuple)
+        }
+    }
+}
+
 fn indent(size: usize) -> String {
     const INDENT: &'static str = "    ";
     (0..size).map(|_| INDENT)
