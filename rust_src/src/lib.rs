@@ -13,13 +13,15 @@ nif_init!( b"rxml_native\0",
            Some(upgrade),
            Some(unload),
            // test
-           nif!(b"native_add\0",   2, native_add, ERL_NIF_DIRTY_JOB_IO_BOUND),
-           nif!(b"tuple_add\0",    1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
+           nif!(b"native_add\0", 2, native_add, ERL_NIF_DIRTY_JOB_IO_BOUND),
+           // TODO: make parse_nif ERL_NIF_DIRTY_JOB_CPU_BOUND?
+           nif!(b"parse_nif\0", 3, parse_nif),
            nif!(b"print_binary\0", 1, print_binary),
            nif!(b"test\0", 0, test),
-           nif!(b"tuple\0", 0, tuple),
            nif!(b"test_badarg\0", 0, test_badarg),
-           nif!(b"test_badarity\0", 0, test_badarity)
+           nif!(b"test_badarity\0", 0, test_badarity),
+           nif!(b"tuple\0", 0, tuple),
+           nif!(b"tuple_add\0", 1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND)
 
            // exml.erl
            //nif!(b"new_parser\0", 0, new_parser)
@@ -47,6 +49,7 @@ mod atom {
     define!(error);
     define!(none);
     define!(ok);
+    define!(unimplemented);
 
 }
 
@@ -222,6 +225,14 @@ extern "C" fn new_parser(env: *mut ErlNifEnv,
     //fake_parser
     //enif_make_binary(env, b"fake_parser\0" as *const u8)
     atom::ok(env)
+}
+
+extern "C"
+fn parse_nif(env: *mut ErlNifEnv,
+             argc: c_int,
+             args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+    assert!(argc == 3);
+    atom::unimplemented(env)
 }
 
 #[allow(dead_code)]
