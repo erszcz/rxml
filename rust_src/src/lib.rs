@@ -326,6 +326,22 @@ impl<'a> Tuple<'a> {
     }
 }
 
+struct List<'a>(&'a [ERL_NIF_TERM]);
+
+impl<'a> List<'a> {
+    fn to_term(&self, env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
+        let &List(ref arr) = self;
+        unsafe {
+            let list = enif_make_list_from_array(env, arr.as_ptr(),
+                                                 arr.len() as c_uint);
+            if !is_enif_ok(list as c_int) {
+                fail!(Error::EnifCallFailed(env))
+            }
+            Ok (list)
+        }
+    }
+}
+
 fn indent(size: usize) -> String {
     const INDENT: &'static str = "    ";
     (0..size).map(|_| INDENT)
