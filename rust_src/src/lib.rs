@@ -6,6 +6,7 @@ use libc::c_uint;
 use ruster_unsafe::*;
 use std::fmt::{ Debug, Error as FormatError, Formatter };
 use std::mem::uninitialized;
+use xml::reader::{ XmlEvent as XMLEvent, Error as XMLError };
 
 /// Create NIF module data and init function.
 nif_init!( b"rxml_native\0",
@@ -289,25 +290,33 @@ fn parse_nif(env: *mut ErlNifEnv,
     let bin = nif_try!(Binary::from_ith_arg(env, 1, args));
     let buf = bin.as_slice();
     let parser = xml::EventReader::new(buf);
-
     let mut events: Vec<ERL_NIF_TERM> = vec![];
     for ev in parser {
         match ev {
-            Ok (xml::reader::XmlEvent::StartElement { name, .. }) =>
-                // TODO: Suboptimal! Here binaries should be put on a stack...
-                events.push( nif_try!(Binary::from_string(env, &name.local_name)).to_term(env) ),
-            Ok (xml::reader::XmlEvent::EndElement { name, .. }) =>
-                // TODO: ...and popped off this stack here.
-                events.push( nif_try!(Binary::from_string(env, &name.local_name)).to_term(env) ),
+            // TODO: Suboptimal! Here binaries should be put on a stack...
+            Ok (XMLEvent::StartElement { name, .. }) => {
+                let bname = nif_try!(Binary::from_string(env, &name.local_name)
+                                            .and_then(|b| b.to_term(env)));
+                let empty_list = nif_try!(List(&[]).to_term(env));
+                let tuple = nif_try!(Tuple(&[atom::xml_element_start(env),
+                                             bname,
+                                             empty_list,
+                                             empty_list]).to_term(env));
+                events.push(tuple);
+            }
+            // TODO: ...and popped off this stack here.
+            Ok (XMLEvent::EndElement { name, .. }) => {
+                let bname = nif_try!(Binary::from_string(env, &name.local_name)
+                                            .and_then(|b| b.to_term(env)));
+                let tuple = nif_try!(Tuple(&[atom::xml_element_end(env),
+                                             bname]).to_term(env));
+                events.push(tuple);
+            }
             Err (e) => nif_try!(Err (Error::BadXML(env))),
             _ => {}
         }
     }
-
-    unsafe {
-        enif_make_list_from_array(env, events.as_ptr() as *const ERL_NIF_TERM,
-                                  events.len() as c_uint)
-    }
+    nif_try!(List(&events).to_term(env))
 }
 
 struct Tuple<'a>(&'a [ERL_NIF_TERM]);

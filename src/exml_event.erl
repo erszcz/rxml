@@ -16,6 +16,14 @@
 
 -export_type([c_parser/0]).
 
+-on_load(load/0).
+
+-spec load() -> any().
+load() ->
+    %% force loading of native extensions
+    {module, _} = code:ensure_loaded(rxml_native),
+    ok.
+
 -opaque c_parser() :: binary().
 
 -spec new_parser() -> {ok, c_parser()}.
@@ -38,11 +46,10 @@ parse(Parser, Data) ->
 parse_final(Parser, Data) ->
     do_parse(Parser, Data, 1).
 
--spec do_parse(c_parser(), binary(), 0 | 1) -> {ok, list()} | {error, string()}.
+-spec do_parse(c_parser(), binary(), 0 | 1) -> {ok, list()} | {error, atom()}.
 do_parse(Parser, Data, Final) ->
-    case rxml_native:parse_nif(Parser, Data, Final) of
-        {ok, Res} ->
-            {ok, lists:reverse(Res)};
-        Error ->
-            Error
+    try
+        {ok, rxml_native:parse_nif(Parser, Data, Final)}
+    catch
+        error:R -> {error, R}
     end.
