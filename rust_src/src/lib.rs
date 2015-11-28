@@ -49,6 +49,35 @@ mod atom {
 
 }
 
+pub enum Error {
+    BadArg (*mut ErlNifEnv),
+    BadArity (*mut ErlNifEnv)
+}
+
+impl From<Error> for ERL_NIF_TERM {
+    fn from(e: Error) -> ERL_NIF_TERM {
+        match e {
+            Error::BadArg(env) =>
+                unsafe { enif_raise_exception(env, atom::badarg(env)) },
+            Error::BadArity(env) =>
+                unsafe { enif_raise_exception(env, atom::badarity(env)) }
+        }
+    }
+}
+
+macro_rules! nif_try { ($expr:expr) => {
+    match $expr {
+        Ok (val) => val,
+        Err (err) => return ::std::convert::From::from(err)
+    }
+} }
+
+macro_rules! fail {
+    ($expr:expr) => (
+        return Err ($expr)
+    )
+}
+
 /// Initialize global constants.
 extern "C" fn load(env: *mut ErlNifEnv,
                    _priv_data: *mut *mut c_void,
@@ -131,18 +160,25 @@ extern "C" fn tuple_add(env: *mut ErlNifEnv,
     }
 }
 
+fn unpack_binary(env: *mut ErlNifEnv, i: isize, args: *const ERL_NIF_TERM)
+    -> Result<ErlNifBinary, Error>
+{
+    unsafe {
+        let arg = *args.offset(i);
+        let mut bin: ErlNifBinary = uninitialized();
+        if c_bool(enif_inspect_binary(env, arg, &mut bin)) {
+            fail!(Error::BadArg(env))
+        }
+        Ok (bin)
+    }
+}
+
 extern "C"
 fn print_binary(env: *mut ErlNifEnv,
                 argc: c_int,
                 args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
     assert!(argc == 1);
-    let bin = unsafe {
-        let mut bin: ErlNifBinary = uninitialized();
-        if c_bool(enif_inspect_binary(env, *args.offset(1), &mut bin)) {
-            return enif_make_badarg(env)
-        }
-        bin
-    };
+    let bin = nif_try!(unpack_binary(env, 1, args));
     //println!("{:?}", bin);
     atom::ok(env)
 }
