@@ -298,11 +298,11 @@ fn parse_nif(env: *mut ErlNifEnv,
                 let bname = nif_try!(Binary::from_string(env, &tag.name)
                                             .and_then(|b| b.to_term(env)));
                 let empty_list = nif_try!(List(&[]).to_term(env));
-                //let attrs = nif_try!(attribute_list(env, &tag.attributes));
+                let attrs = nif_try!(attribute_list(env, tag.attributes.iter()));
                 let tuple = nif_try!(Tuple(&[atom::xml_element_start(env),
                                              bname,
                                              empty_list,
-                                             empty_list]).to_term(env));
+                                             attrs]).to_term(env));
                 events.push(tuple);
             }
             // TODO: ...and popped off this stack here.
@@ -355,19 +355,21 @@ impl<'a> List<'a> {
     }
 }
 
-//fn attribute_list(env: *mut ErlNifEnv,
-//                  attrs: &[xml::attribute::OwnedAttribute]) -> Result<ERL_NIF_TERM, Error> {
-//    let l: Vec<ERL_NIF_TERM> = attrs.iter()
-//        .map(|oa| {
-//            let attr = [nif_try!(Binary::from_string(env, &oa.name.local_name)
-//                                        .and_then(|b| b.to_term(env))),
-//                        nif_try!(Binary::from_string(env, &oa.value)
-//                                        .and_then(|b| b.to_term(env)))];
-//            nif_try!(Tuple(&attr).to_term(env))
-//        })
-//        .collect();
-//    List(&l).to_term(env)
-//}
+type AttrIter<'a> = std::collections::hash_map::Iter<'a, (String, Option<String>), String>;
+
+fn attribute_list(env: *mut ErlNifEnv,
+                  attrs: AttrIter) -> Result<ERL_NIF_TERM, Error> {
+    let l: Vec<ERL_NIF_TERM> = attrs
+        .map(|(&(ref name, _), value)| {
+            let attr = [nif_try!(Binary::from_string(env, name)
+                                        .and_then(|b| b.to_term(env))),
+                        nif_try!(Binary::from_string(env, value)
+                                        .and_then(|b| b.to_term(env)))];
+            nif_try!(Tuple(&attr).to_term(env))
+        })
+        .collect();
+    List(&l).to_term(env)
+}
 
 fn indent(size: usize) -> String {
     const INDENT: &'static str = "    ";

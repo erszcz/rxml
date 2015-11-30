@@ -23,10 +23,15 @@ basic_parse_test() ->
 
 attrs_parsing_test() ->
     {ok, Parser} = exml_event:new_parser(),
-    ?assertEqual({ok, [{xml_element_start, <<"test">>, [], [{<<"attr">>, <<"val">>},
-                                                            {<<"second_attr">>, <<"val2">>}]},
+    {ok, [{xml_element_start, Name, NS, Attrs},
+          End]} = exml_event:parse_final(Parser, <<"<test attr='val' second_attr='val2'/>">>),
+    Sorted = {ok, [{xml_element_start, Name, NS, lists:sort(Attrs)},
+                   End]},
+    ?assertEqual({ok, [{xml_element_start, <<"test">>, [],
+                        lists:sort([{<<"attr">>, <<"val">>},
+                                    {<<"second_attr">>, <<"val2">>}])},
                        {xml_element_end, <<"test">>}]},
-                 exml_event:parse_final(Parser, <<"<test attr='val' second_attr='val2'/>">>)),
+                 Sorted),
     ?assertEqual(ok, exml_event:free_parser(Parser)).
 
 open_tag_test() ->
