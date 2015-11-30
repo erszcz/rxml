@@ -311,8 +311,17 @@ fn parse_nif(env: *mut ErlNifEnv,
 }
 
 fn xml_element_start(env: *mut ErlNifEnv, tag: &xml::StartTag) -> Result<ERL_NIF_TERM, Error> {
-    let bname = try!(Binary::from_string(env, &tag.name)
-                            .and_then(|b| b.to_term(env)));
+    let bname = if let Some (ref prefix) = tag.prefix {
+        let bytes: Vec<u8> =
+            prefix.bytes().chain(":".bytes()).chain(tag.name.bytes()).collect();
+        let prefixed_name = try!(std::str::from_utf8(&bytes)
+                                          .or(Err (Error::BadXML(env))));
+        try!(Binary::from_string(env, prefixed_name)
+                    .and_then(|b| b.to_term(env)))
+    } else {
+        try!(Binary::from_string(env, &tag.name)
+                    .and_then(|b| b.to_term(env)))
+    };
     let empty_list = try!(List(&[]).to_term(env));
     let attrs = try!(attribute_list(env, tag.attributes.iter()));
     Tuple(&[atom::xml_element_start(env), bname, empty_list, attrs]).to_term(env)
