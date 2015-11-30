@@ -53,6 +53,7 @@ mod atom {
     define!(none);
     define!(ok);
     define!(unimplemented);
+    define!(xml_cdata);
     define!(xml_element_end);
     define!(xml_element_start);
 
@@ -311,6 +312,13 @@ fn parse_nif(env: *mut ErlNifEnv,
                                             .and_then(|b| b.to_term(env)));
                 let tuple = nif_try!(Tuple(&[atom::xml_element_end(env),
                                              bname]).to_term(env));
+                events.push(tuple);
+            }
+            Ok (xml::Event::Characters (ref chars)) => {
+                let cdata = nif_try!(Binary::from_string(env, chars)
+                                            .and_then(|b| b.to_term(env)));
+                let tuple = nif_try!(Tuple(&[atom::xml_cdata(env),
+                                             cdata]).to_term(env));
                 events.push(tuple);
             }
             Err (e) => {
