@@ -294,33 +294,12 @@ fn parse_nif(env: *mut ErlNifEnv,
     let mut events: Vec<ERL_NIF_TERM> = vec![];
     for ev in parser {
         match ev {
-            // TODO: Suboptimal! Binaries should be put on a stack here...
-            Ok (xml::Event::ElementStart (tag)) => {
-                let bname = nif_try!(Binary::from_string(env, &tag.name)
-                                            .and_then(|b| b.to_term(env)));
-                let empty_list = nif_try!(List(&[]).to_term(env));
-                let attrs = nif_try!(attribute_list(env, tag.attributes.iter()));
-                let tuple = nif_try!(Tuple(&[atom::xml_element_start(env),
-                                             bname,
-                                             empty_list,
-                                             attrs]).to_term(env));
-                events.push(tuple);
-            }
-            // TODO: ...and popped off this stack here.
-            Ok (xml::Event::ElementEnd (tag)) => {
-                let bname = nif_try!(Binary::from_string(env, &tag.name)
-                                            .and_then(|b| b.to_term(env)));
-                let tuple = nif_try!(Tuple(&[atom::xml_element_end(env),
-                                             bname]).to_term(env));
-                events.push(tuple);
-            }
-            Ok (xml::Event::Characters (ref chars)) => {
-                let cdata = nif_try!(Binary::from_string(env, chars)
-                                            .and_then(|b| b.to_term(env)));
-                let tuple = nif_try!(Tuple(&[atom::xml_cdata(env),
-                                             cdata]).to_term(env));
-                events.push(tuple);
-            }
+            Ok (xml::Event::ElementStart (ref tag)) =>
+                events.push(nif_try!(xml_element_start(env, tag))),
+            Ok (xml::Event::ElementEnd (ref tag)) =>
+                events.push(nif_try!(xml_element_end(env, tag))),
+            Ok (xml::Event::Characters (ref chars)) =>
+                events.push(nif_try!(xml_characters(env, chars))),
             Err (e) => {
                 print!("{:?}\r\n", e);
                 nif_try!(Err (Error::BadXML(env)))
@@ -329,6 +308,26 @@ fn parse_nif(env: *mut ErlNifEnv,
         }
     }
     nif_try!(List(&events).to_term(env))
+}
+
+fn xml_element_start(env: *mut ErlNifEnv, tag: &xml::StartTag) -> Result<ERL_NIF_TERM, Error> {
+    let bname = try!(Binary::from_string(env, &tag.name)
+                            .and_then(|b| b.to_term(env)));
+    let empty_list = try!(List(&[]).to_term(env));
+    let attrs = try!(attribute_list(env, tag.attributes.iter()));
+    Tuple(&[atom::xml_element_start(env), bname, empty_list, attrs]).to_term(env)
+}
+
+fn xml_element_end(env: *mut ErlNifEnv, tag: &xml::EndTag) -> Result<ERL_NIF_TERM, Error> {
+    let bname = try!(Binary::from_string(env, &tag.name)
+                            .and_then(|b| b.to_term(env)));
+    Tuple(&[atom::xml_element_end(env), bname]).to_term(env)
+}
+
+fn xml_characters(env: *mut ErlNifEnv, chars: &str) -> Result<ERL_NIF_TERM, Error> {
+    let cdata = try!(Binary::from_string(env, chars)
+                            .and_then(|b| b.to_term(env)));
+    Tuple(&[atom::xml_cdata(env), cdata]).to_term(env)
 }
 
 struct Tuple<'a>(&'a [ERL_NIF_TERM]);
