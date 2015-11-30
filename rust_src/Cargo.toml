@@ -6,7 +6,7 @@ authors = ["Radek Szymczyszyn <lavrin@gmail.com>"]
 [dependencies]
 libc = "*"
 ruster_unsafe = "0.2.0"
-xml-rs = "*"
+RustyXML = "*"
 
 [lib]
 name = "rxml"
