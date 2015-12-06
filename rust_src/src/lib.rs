@@ -324,7 +324,8 @@ fn xml_element_start(env: *mut ErlNifEnv, tag: &xml::StartTag) -> Result<ERL_NIF
     };
     let empty_list = try!(List(&[]).to_term(env));
     let attrs = try!(attribute_list(env, tag.attributes.iter()));
-    Tuple(&[atom::xml_element_start(env), bname, empty_list, attrs]).to_term(env)
+    let nss = try!(namespace_list(env, tag.attributes.iter()));
+    Tuple(&[atom::xml_element_start(env), bname, nss, attrs]).to_term(env)
 }
 
 fn xml_element_end(env: *mut ErlNifEnv, tag: &xml::EndTag) -> Result<ERL_NIF_TERM, Error> {
@@ -376,12 +377,60 @@ type AttrIter<'a> = std::collections::hash_map::Iter<'a, (String, Option<String>
 fn attribute_list(env: *mut ErlNifEnv,
                   attrs: AttrIter) -> Result<ERL_NIF_TERM, Error> {
     let l: Vec<ERL_NIF_TERM> = attrs
+        .filter(|&(&(ref name, ref opt_ns), value)| {
+            if let &Some(ref ns) = opt_ns {
+                { false }
+            } else if name == "xmlns"
+                { false }
+            else
+                { true }
+        })
         .map(|(&(ref name, _), value)| {
             let attr = [nif_try!(Binary::from_string(env, name)
                                         .and_then(|b| b.to_term(env))),
                         nif_try!(Binary::from_string(env, value)
                                         .and_then(|b| b.to_term(env)))];
             nif_try!(Tuple(&attr).to_term(env))
+        })
+        .collect();
+    List(&l).to_term(env)
+}
+
+fn namespace_list(env: *mut ErlNifEnv,
+                  attrs: AttrIter) -> Result<ERL_NIF_TERM, Error> {
+    let l: Vec<ERL_NIF_TERM> = attrs
+        .filter(|&(&(ref name, ref opt_ns), value)| {
+            if let &Some(ref ns) = opt_ns {
+                { true }
+            } else if name == "xmlns"
+                { true }
+            else
+                { false }
+        })
+        .map(|(&(ref name, ref opt_ns), value)| {
+            if let &Some(ref ns) = opt_ns {
+                if ns == "http://www.w3.org/2000/xmlns/" {
+                    let ns = [nif_try!(Binary::from_string(env, value)
+                                              .and_then(|b| b.to_term(env))),
+                              nif_try!(Binary::from_string(env, name)
+                                              .and_then(|b| b.to_term(env)))];
+                    nif_try!(Tuple(&ns).to_term(env))
+                } else {
+                    // Assumption: there's only one namespace which can be used
+                    // to define namespace prefixes and it's handled in the case
+                    // above this one.
+                    unreachable!()
+                }
+            } else  if name == "xmlns" {
+                let ns = [nif_try!(Binary::from_string(env, value)
+                                          .and_then(|b| b.to_term(env))),
+                          atom::none(env)];
+                nif_try!(Tuple(&ns).to_term(env))
+            } else {
+                // All cases except the handled ones should be filtered
+                // out by the previous .filter() pass.
+                unreachable!()
+            }
         })
         .collect();
     List(&l).to_term(env)

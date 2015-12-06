@@ -50,13 +50,14 @@ cdata_test() ->
 
 xmlns_declaration_test() ->
     {ok, Parser} = exml_event:new_parser(),
+    {ok, Parsed} = exml_event:parse(Parser, <<"<str:stream"
+                                              " xmlns:str='stream-ns'"
+                                              " xmlns='naked-ns'>">>),
+    [{xml_element_start, Name, NSs, []}] = Parsed,
+    Sorted = [{xml_element_start, Name, lists:sort(NSs), []}],
     ?assertEqual({ok, [{xml_element_start, <<"str:stream">>,
-                        %% note the reverse order of namespaces
-                        [{<<"naked-ns">>, none},
-                         {<<"stream-ns">>, <<"str">>}],
+                        lists:sort([{<<"naked-ns">>, none},
+                                    {<<"stream-ns">>, <<"str">>}]),
                         []}]},
-                 exml_event:parse(Parser, <<"<str:stream"
-                                            " xmlns:str='stream-ns'"
-                                            " xmlns='naked-ns'
-                                            >">>)),
+                 {ok, Sorted}),
     ?assertEqual(ok, exml_event:free_parser(Parser)).
