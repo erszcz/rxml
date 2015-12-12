@@ -61,3 +61,15 @@ xmlns_declaration_test() ->
                         []}]},
                  {ok, Sorted}),
     ?assertEqual(ok, exml_event:free_parser(Parser)).
+
+xmlns_nested_declaration_test() ->
+    {ok, Parser} = exml_event:new_parser(),
+    ?assertEqual({ok, [{xml_element_start, <<"str:stream">>,
+                        %% note the reverse order of namespaces
+                        [{<<"naked-ns">>, none},
+                         {<<"stream-ns">>, <<"str">>}],
+                        []},
+                       {xml_element_start, <<"str:nested">>, [], []}]},
+                 exml_event:parse(Parser, <<"<str:stream xmlns:str='stream-ns'"
+                                            "            xmlns='naked-ns'><str:nested>">>)),
+    ?assertEqual(ok, exml_event:free_parser(Parser)).
