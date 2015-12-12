@@ -28,8 +28,11 @@ load() ->
 
 -spec new_parser() -> {ok, c_parser()}.
 new_parser() ->
-    %% TODO: stub!
-    {ok, <<>>}.
+    try
+        {ok, rxml_native:new_parser()}
+    catch
+        _:R -> {error, R}
+    end.
 
 -spec reset_parser(c_parser()) -> ok.
 reset_parser(Parser) ->

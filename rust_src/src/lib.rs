@@ -7,6 +7,9 @@ use ruster_unsafe::*;
 use std::fmt::{ Debug, Error as FormatError, Formatter };
 use std::mem::uninitialized;
 
+const LOAD_OK: c_int    = 0;
+const LOAD_ERROR: c_int = 1;
+
 /// Create NIF module data and init function.
 nif_init!( b"rxml_native\0",
            Some(load),
@@ -22,13 +25,14 @@ nif_init!( b"rxml_native\0",
            nif!(b"test_badarg\0", 0, test_badarg),
            nif!(b"test_badarity\0", 0, test_badarity),
            nif!(b"tuple\0", 0, tuple),
-           nif!(b"tuple_add\0", 1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND)
+           nif!(b"tuple_add\0", 1, tuple_add, ERL_NIF_DIRTY_JOB_CPU_BOUND),
 
-           // exml.erl
-           //nif!(b"new_parser\0", 0, new_parser)
+           // exml_event:new_parser/0
+           nif!(b"new_parser\0", 0, new_parser)
          );
 
 static mut NIF_INTERNAL_ERROR: ERL_NIF_TERM = 0 as ERL_NIF_TERM;
+static mut PARSER_RESOURCE: *mut ErlNifResourceType = 0 as *mut ErlNifResourceType;
 
 mod atom {
 
@@ -95,8 +99,20 @@ macro_rules! fail {
 extern "C" fn load(env: *mut ErlNifEnv,
                    _priv_data: *mut *mut c_void,
                    _load_info: ERL_NIF_TERM)-> c_int {
-    unsafe { NIF_INTERNAL_ERROR = enif_make_atom(env, b"error\0" as *const u8) }
-    0
+    unsafe {
+        NIF_INTERNAL_ERROR = enif_make_atom(env, b"error\0" as *const u8);
+        if !is_enif_ok(NIF_INTERNAL_ERROR as c_int)
+            { return LOAD_ERROR }
+        PARSER_RESOURCE = enif_open_resource_type(env,
+                                                  0 as *const u8,
+                                                  b"parser_resource\0" as *const u8,
+                                                  Some (parser_dtor as ErlNifResourceDtor),
+                                                  ErlNifResourceFlags::ERL_NIF_RT_CREATE,
+                                                  0 as *mut ErlNifResourceFlags);
+        if !is_enif_ok(PARSER_RESOURCE as c_int)
+            { return LOAD_ERROR }
+    }
+    LOAD_OK
 }
 
 /// Does nothing, reports success
@@ -272,11 +288,33 @@ fn tuple(env: *mut ErlNifEnv,
 extern "C" fn new_parser(env: *mut ErlNifEnv,
                          argc: c_int,
                          args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
-    //let mut fake_parser: ErlNifBinary = uninitialized();
-    //enif_alloc_binary(12, &fake_parser);
-    //fake_parser
-    //enif_make_binary(env, b"fake_parser\0" as *const u8)
-    atom::ok(env)
+    let parser = nif_try!(allocate_parser(env));
+    parser
+}
+
+fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
+    let parser_template = xml::Parser::new();
+    unsafe {
+        let mut parser_p: *mut xml::Parser = enif_alloc_resource(PARSER_RESOURCE,
+                                                                 std::mem::size_of::<xml::Parser>())
+                                             as *mut xml::Parser;
+        if !is_enif_ok(parser_p as c_int)
+            { fail!(Error::EnifCallFailed(env)) }
+        std::ptr::write(parser_p, parser_template);
+        let parser: &'static xml::Parser = std::mem::transmute(parser_p);
+        let parser_term = enif_make_resource(env, parser_p as *mut c_void);
+        if !is_enif_ok(parser_term as c_int)
+            { fail!(Error::EnifCallFailed(env)) }
+        enif_release_resource(parser_p as *mut c_void);
+        Ok (parser_term)
+    }
+}
+
+extern "C" fn parser_dtor(_env: *mut ErlNifEnv, parser_p: *mut c_void) -> () {
+    unsafe {
+        let parser: &'static xml::Parser = std::mem::transmute(parser_p);
+        // let the Drop destructor do the rest
+    }
 }
 
 // Throws exceptions on errors.
@@ -289,10 +327,10 @@ fn parse_nif(env: *mut ErlNifEnv,
     assert!(argc == 3);
     let bin = nif_try!(Binary::from_ith_arg(env, 1, args));
     let buf = nif_try!(std::str::from_utf8(bin.as_slice()).or(Err (Error::BadXML(env))));
-    let mut parser = xml::Parser::new();
+    let mut parser = nif_try!(get_parser(env, 0, args));
     parser.feed_str(buf);
     let mut events: Vec<ERL_NIF_TERM> = vec![];
-    for ev in parser {
+    while let Some (ev) = parser.next() {
         match ev {
             Ok (xml::Event::ElementStart (ref tag)) =>
                 events.push(nif_try!(xml_element_start(env, tag))),
@@ -308,6 +346,21 @@ fn parse_nif(env: *mut ErlNifEnv,
         }
     }
     nif_try!(List(&events).to_term(env))
+}
+
+fn get_parser(env: *mut ErlNifEnv,
+              i: isize,
+              args: *const ERL_NIF_TERM) -> Result<&'static mut xml::Parser, Error> {
+    unsafe {
+        let mut parser: &'static mut xml::Parser = uninitialized();
+        // TODO: there might be a more elegant way of doing this 2-step cast...
+        let mut parser_mut_p: *mut c_void = parser as *mut xml::Parser as *mut c_void;
+        let parser_mut_p2: *mut *mut c_void = &mut parser_mut_p as *mut *mut c_void;
+        if !is_enif_ok((enif_get_resource(env, *args.offset(i), PARSER_RESOURCE, parser_mut_p2))) {
+            fail!(Error::BadArg(env))
+        }
+        Ok (parser)
+    }
 }
 
 fn xml_element_start(env: *mut ErlNifEnv, tag: &xml::StartTag) -> Result<ERL_NIF_TERM, Error> {
