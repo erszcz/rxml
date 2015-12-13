@@ -337,7 +337,8 @@ fn parse_nif(env: *mut ErlNifEnv,
     assert!(argc == 3);
     let bin = nif_try!(Binary::from_ith_arg(env, 1, args));
     let buf = nif_try!(std::str::from_utf8(bin.as_slice()).or(Err (Error::BadXML(env))));
-    let mut parser = nif_try!(get_parser(env, 0, args));
+    let parser_guard = ();
+    let mut parser = nif_try!(get_parser(env, 0, args, &parser_guard));
     parser.feed_str(buf);
     let mut events: Vec<ERL_NIF_TERM> = vec![];
     while let Some (ev) = parser.next() {
@@ -358,9 +359,10 @@ fn parse_nif(env: *mut ErlNifEnv,
     nif_try!(List(&events).to_term(env))
 }
 
-fn get_parser(env: *mut ErlNifEnv,
-              i: isize,
-              args: *const ERL_NIF_TERM) -> Result<&'static mut xml::Parser, Error> {
+fn get_parser<'parser>(env: *mut ErlNifEnv,
+                       i: isize,
+                       args: *const ERL_NIF_TERM,
+                       guard: &'parser ()) -> Result<&'parser mut xml::Parser, Error> {
     unsafe {
         let mut paddr = &mut (0 as *mut c_void) as *mut *mut c_void;
         if !is_enif_ok( enif_get_resource(env, *args.offset(i), PARSER_RESOURCE, paddr) ) {
