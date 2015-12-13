@@ -292,18 +292,18 @@ extern "C" fn new_parser(env: *mut ErlNifEnv,
     nif_try!(allocate_parser(env))
 }
 
-type parser_p = *const c_void;
+type ParserPointer = *const c_void;
 
 fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
     let mut parser: Box<xml::Parser> = Box::new(xml::Parser::new());
     unsafe {
-        let size = std::mem::size_of::<parser_p>();
-        let mut parser_addr: *mut parser_p = enif_alloc_resource(PARSER_RESOURCE, size)
-                                             as *mut parser_p;
+        let size = std::mem::size_of::<ParserPointer>();
+        let mut parser_addr: *mut ParserPointer = enif_alloc_resource(PARSER_RESOURCE, size)
+                                             as *mut ParserPointer;
         if !is_enif_ok(parser_addr as c_int)
             { fail!(Error::EnifCallFailed(env)) }
         let parser_p = Box::into_raw(parser);
-        *parser_addr = parser_p as parser_p;
+        *parser_addr = parser_p as ParserPointer;
         let parser_addr_term = enif_make_resource(env, parser_addr as *mut c_void);
         if !is_enif_ok(parser_addr_term as c_int)
             { fail!(Error::EnifCallFailed(env)) }
@@ -314,7 +314,7 @@ fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
 
 // TODO: this might be broken!
 extern "C" fn parser_dtor(_env: *mut ErlNifEnv, void_p: *mut c_void) -> () {
-    let parser_p = void_p as parser_p;
+    let parser_p = void_p as ParserPointer;
     let parser = unsafe { Box::from_raw(*(parser_p as *mut *mut xml::Parser)) };
     print!(" parser_dtor\n\r");
     print!(" parser ref : {:?}\n\r", parser.as_ref() as *const xml::Parser);
