@@ -288,18 +288,8 @@ fn tuple(env: *mut ErlNifEnv,
 extern "C" fn new_parser(env: *mut ErlNifEnv,
                          argc: c_int,
                          args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
-    let mut p = xml::Parser::new();
-    t(&mut p as *mut xml::Parser);
     let parser = nif_try!(allocate_parser(env));
     parser
-}
-
-fn t(p: *mut xml::Parser) {
-    let mut p2: &mut xml::Parser = unsafe { &mut *p };
-    p2.feed_str("<a b='3'/>");
-    while let Some (ev) = p2.next() {
-        print!("{:?}\n\r", ev);
-    }
 }
 
 type parser_p = *const c_void;
