@@ -295,21 +295,22 @@ extern "C" fn new_parser(env: *mut ErlNifEnv,
 // TODO: this leaks memory!
 //       I can't just leave the template like this - it will never be deallocated
 fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
-    let mut parser_template: Box<xml::Parser> = Box::new(xml::Parser::new());
-    parser_template.feed_str("");
+    let parser: Box<xml::Parser> = Box::new(xml::Parser::new());
     unsafe {
-        let size = std::mem::size_of::<xml::Parser>();
-        let mut parser_p: *mut xml::Parser = enif_alloc_resource(PARSER_RESOURCE, size)
-                                             as *mut xml::Parser;
-        if !is_enif_ok(parser_p as c_int)
+        let size = std::mem::size_of::<c_uint>();
+        let mut parser_addr: *mut c_uint = enif_alloc_resource(PARSER_RESOURCE, size)
+                                           as *mut c_uint;
+        if !is_enif_ok(parser_addr as c_int)
             { fail!(Error::EnifCallFailed(env)) }
-        let parser_template_p: *mut xml::Parser = Box::into_raw(parser_template);
-        std::ptr::copy_nonoverlapping(parser_template_p, parser_p, size);
-        let parser_term = enif_make_resource(env, parser_p as *mut c_void);
-        if !is_enif_ok(parser_term as c_int)
+        let parser_p = Box::into_raw(parser);
+        *parser_addr = parser_p as c_uint;
+        print!(" parser_addr: {:?}\n\r",  parser_addr);
+        print!("*parser_addr: {:?}\n\r", *parser_addr);
+        let parser_addr_term = enif_make_resource(env, parser_addr as *mut c_void);
+        if !is_enif_ok(parser_addr_term as c_int)
             { fail!(Error::EnifCallFailed(env)) }
-        enif_release_resource(parser_p as *mut c_void);
-        Ok (parser_term)
+        enif_release_resource(parser_addr as *mut c_void);
+        Ok (parser_addr_term)
     }
 }
 
@@ -353,13 +354,19 @@ fn get_parser(env: *mut ErlNifEnv,
               i: isize,
               args: *const ERL_NIF_TERM) -> Result<&'static mut xml::Parser, Error> {
     unsafe {
-        let mut parser: &'static mut xml::Parser = uninitialized();
-        // TODO: there might be a more elegant way of doing this 2-step cast...
-        let mut parser_mut_p: *mut c_void = parser as *mut xml::Parser as *mut c_void;
-        let parser_mut_p2: *mut *mut c_void = &mut parser_mut_p as *mut *mut c_void;
-        if !is_enif_ok((enif_get_resource(env, *args.offset(i), PARSER_RESOURCE, parser_mut_p2))) {
+        let mut paddr = &mut (0 as *mut c_void) as *mut *mut c_void;
+        print!(" paddr: {:?}\n\r",  paddr);
+        print!("*paddr: {:?}\n\r",  paddr);
+        let r = enif_get_resource(env, *args.offset(i), PARSER_RESOURCE, paddr);
+        print!("r: {:?}\n\r", r);
+        print!(" paddr: {:?}\n\r",  paddr);
+        print!("*paddr: {:?}\n\r", *paddr);
+        if !is_enif_ok(r) {
             fail!(Error::BadArg(env))
         }
+        assert!(*paddr != 0 as *mut c_void, "enif_get_resource failed");
+        print!("got addr: {:?}\n", *paddr);
+        let parser = &mut *(*paddr as *mut xml::Parser);
         Ok (parser)
     }
 }
