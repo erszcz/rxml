@@ -292,16 +292,19 @@ extern "C" fn new_parser(env: *mut ErlNifEnv,
     parser
 }
 
+// TODO: this leaks memory!
+//       I can't just leave the template like this - it will never be deallocated
 fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
-    let parser_template = xml::Parser::new();
+    let mut parser_template: Box<xml::Parser> = Box::new(xml::Parser::new());
+    parser_template.feed_str("");
     unsafe {
-        let mut parser_p: *mut xml::Parser = enif_alloc_resource(PARSER_RESOURCE,
-                                                                 std::mem::size_of::<xml::Parser>())
+        let size = std::mem::size_of::<xml::Parser>();
+        let mut parser_p: *mut xml::Parser = enif_alloc_resource(PARSER_RESOURCE, size)
                                              as *mut xml::Parser;
         if !is_enif_ok(parser_p as c_int)
             { fail!(Error::EnifCallFailed(env)) }
-        std::ptr::write(parser_p, parser_template);
-        let parser: &'static xml::Parser = std::mem::transmute(parser_p);
+        let parser_template_p: *mut xml::Parser = Box::into_raw(parser_template);
+        std::ptr::copy_nonoverlapping(parser_template_p, parser_p, size);
         let parser_term = enif_make_resource(env, parser_p as *mut c_void);
         if !is_enif_ok(parser_term as c_int)
             { fail!(Error::EnifCallFailed(env)) }
@@ -311,10 +314,8 @@ fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
 }
 
 extern "C" fn parser_dtor(_env: *mut ErlNifEnv, parser_p: *mut c_void) -> () {
-    unsafe {
-        let parser: &'static xml::Parser = std::mem::transmute(parser_p);
-        // let the Drop destructor do the rest
-    }
+    let parser = unsafe { Box::from_raw(parser_p as *mut xml::Parser) };
+    // let the Drop destructor do the rest
 }
 
 // Throws exceptions on errors.
