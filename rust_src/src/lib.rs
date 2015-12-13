@@ -288,24 +288,40 @@ fn tuple(env: *mut ErlNifEnv,
 extern "C" fn new_parser(env: *mut ErlNifEnv,
                          argc: c_int,
                          args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+    let mut p = xml::Parser::new();
+    t(&mut p as *mut xml::Parser);
     let parser = nif_try!(allocate_parser(env));
     parser
 }
 
+fn t(p: *mut xml::Parser) {
+    let mut p2: &mut xml::Parser = unsafe { &mut *p };
+    p2.feed_str("<a b='3'/>");
+    while let Some (ev) = p2.next() {
+        print!("{:?}\n\r", ev);
+    }
+}
+
+type parser_p = *const c_void;
+
 // TODO: this leaks memory!
 //       I can't just leave the template like this - it will never be deallocated
 fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
-    let parser: Box<xml::Parser> = Box::new(xml::Parser::new());
+    let mut parser: Box<xml::Parser> = Box::new(xml::Parser::new());
+    parser.feed_str("<a/>");
     unsafe {
-        let size = std::mem::size_of::<c_uint>();
-        let mut parser_addr: *mut c_uint = enif_alloc_resource(PARSER_RESOURCE, size)
-                                           as *mut c_uint;
+        let size = std::mem::size_of::<parser_p>();
+        let mut parser_addr: *mut parser_p = enif_alloc_resource(PARSER_RESOURCE, size)
+                                           as *mut parser_p;
         if !is_enif_ok(parser_addr as c_int)
             { fail!(Error::EnifCallFailed(env)) }
+        print!(" parser ref : {:?}\n\r", parser.as_ref() as *const xml::Parser);
         let parser_p = Box::into_raw(parser);
-        *parser_addr = parser_p as c_uint;
+        print!(" parser_p   : {:?}\n\r",  parser_p);
+        *parser_addr = parser_p as parser_p;
         print!(" parser_addr: {:?}\n\r",  parser_addr);
         print!("*parser_addr: {:?}\n\r", *parser_addr);
+        print!("*parser_addr: {:?}\n\r", (*parser_addr) as *const xml::Parser);
         let parser_addr_term = enif_make_resource(env, parser_addr as *mut c_void);
         if !is_enif_ok(parser_addr_term as c_int)
             { fail!(Error::EnifCallFailed(env)) }
@@ -355,18 +371,21 @@ fn get_parser(env: *mut ErlNifEnv,
               args: *const ERL_NIF_TERM) -> Result<&'static mut xml::Parser, Error> {
     unsafe {
         let mut paddr = &mut (0 as *mut c_void) as *mut *mut c_void;
-        print!(" paddr: {:?}\n\r",  paddr);
-        print!("*paddr: {:?}\n\r",  paddr);
+        print!(" paddr      : {:?}\n\r",  paddr);
+        print!("*paddr      : {:?}\n\r", *paddr);
         let r = enif_get_resource(env, *args.offset(i), PARSER_RESOURCE, paddr);
         print!("r: {:?}\n\r", r);
-        print!(" paddr: {:?}\n\r",  paddr);
-        print!("*paddr: {:?}\n\r", *paddr);
+        print!(" paddr      : {:?}\n\r",  paddr);
+        print!("*paddr      : {:?}\n\r", *paddr);
         if !is_enif_ok(r) {
             fail!(Error::BadArg(env))
         }
         assert!(*paddr != 0 as *mut c_void, "enif_get_resource failed");
-        print!("got addr: {:?}\n", *paddr);
-        let parser = &mut *(*paddr as *mut xml::Parser);
+        let pi: *mut parser_p = *(paddr as *mut *mut parser_p);
+        print!("got addr    : {:?}\n", **(paddr as *mut *mut parser_p));
+        let parser = &mut **(paddr as *mut *mut xml::Parser);
+        let boxed = unsafe { Box::from_raw(**(paddr as *mut *mut *mut xml::Parser)) };
+        print!(" parser ref : {:?}\n\r", boxed.as_ref() as *const xml::Parser);
         Ok (parser)
     }
 }
