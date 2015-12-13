@@ -20,4 +20,8 @@ xml_sort(#xmlstreamstart{attrs = Attrs} = StreamStart) ->
 xml_sort(#xmlel{} = El) ->
     #xmlel{attrs = Attrs, children = Children} = El,
     El#xmlel{attrs = lists:sort(Attrs),
-             children = [ xml_sort(C) || C <- Children ]}.
+             children = [ xml_sort(C) || C <- Children ]};
+xml_sort({xml_element_start, Name, NSs, Attrs} = ElementStart) ->
+    {xml_element_start, Name, lists:sort(NSs), lists:sort(Attrs)};
+xml_sort(Elements) when is_list(Elements) ->
+    [ xml_sort(E) || E <- Elements ].

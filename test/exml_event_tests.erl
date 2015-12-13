@@ -12,6 +12,9 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("exml_event.hrl").
 
+-include("exml_stream.hrl").
+-include("exml_test.hrl").
+
 -compile(export_all).
 
 basic_parse_test() ->
@@ -64,12 +67,14 @@ xmlns_declaration_test() ->
 
 xmlns_nested_declaration_test() ->
     {ok, Parser} = exml_event:new_parser(),
-    ?assertEqual({ok, [{xml_element_start, <<"str:stream">>,
-                        %% note the reverse order of namespaces
-                        [{<<"naked-ns">>, none},
-                         {<<"stream-ns">>, <<"str">>}],
-                        []},
-                       {xml_element_start, <<"str:nested">>, [], []}]},
-                 exml_event:parse(Parser, <<"<str:stream xmlns:str='stream-ns'"
-                                            "            xmlns='naked-ns'><str:nested>">>)),
+    {ok, Parsed} = exml_event:parse(Parser,
+                                    <<"<str:stream xmlns:str='stream-ns'"
+                                      "            xmlns='naked-ns'><str:nested>">>),
+    ?exmlAssertEqual([{xml_element_start, <<"str:stream">>,
+                       %% note the reverse order of namespaces
+                       [{<<"naked-ns">>, none},
+                        {<<"stream-ns">>, <<"str">>}],
+                       []},
+                      {xml_element_start, <<"str:nested">>, [], []}],
+                     Parsed),
     ?assertEqual(ok, exml_event:free_parser(Parser)).
