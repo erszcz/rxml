@@ -266,11 +266,8 @@ fn get_parser<'parser>(env: *mut ErlNifEnv,
 
 fn xml_element_start(env: *mut ErlNifEnv, tag: &xml::StartTag) -> Result<ERL_NIF_TERM, Error> {
     let bname = if let Some (ref prefix) = tag.prefix {
-        let bytes: Vec<u8> =
-            prefix.bytes().chain(":".bytes()).chain(tag.name.bytes()).collect();
-        let prefixed_name = try!(std::str::from_utf8(&bytes)
-                                          .or(Err (Error::BadXML(env))));
-        try!(Binary::from_string(env, prefixed_name)
+        let prefixed = try!(prefix_with(&tag.name, prefix).or(Err (Error::BadXML(env))));
+        try!(Binary::from_string(env, &prefixed)
                     .and_then(|b| b.to_term(env)))
     } else {
         try!(Binary::from_string(env, &tag.name)
@@ -279,6 +276,12 @@ fn xml_element_start(env: *mut ErlNifEnv, tag: &xml::StartTag) -> Result<ERL_NIF
     let attrs = try!(attribute_list(env, tag.attributes.iter()));
     let nss = try!(namespace_list(env, tag.attributes.iter()));
     Tuple(&[atom::xml_element_start(env), bname, nss, attrs]).to_term(env)
+}
+
+fn prefix_with(name: &str, prefix: &str) -> Result<String, ()> {
+    let bytes: Vec<u8> =
+        prefix.bytes().chain(":".bytes()).chain(name.bytes()).collect();
+    std::string::String::from_utf8(bytes).or(Err (()))
 }
 
 fn xml_element_end(env: *mut ErlNifEnv, tag: &xml::EndTag) -> Result<ERL_NIF_TERM, Error> {
