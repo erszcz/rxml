@@ -287,7 +287,8 @@ fn tuple(env: *mut ErlNifEnv,
 /// Create a new XML parser.
 extern "C" fn new_parser(env: *mut ErlNifEnv,
                          argc: c_int,
-                         args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+                         _args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
+    assert!(argc == 0);
     nif_try!(allocate_parser(env))
 }
 
