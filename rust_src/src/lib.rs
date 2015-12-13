@@ -288,8 +288,7 @@ fn tuple(env: *mut ErlNifEnv,
 extern "C" fn new_parser(env: *mut ErlNifEnv,
                          argc: c_int,
                          args: *const ERL_NIF_TERM) -> ERL_NIF_TERM {
-    let parser = nif_try!(allocate_parser(env));
-    parser
+    nif_try!(allocate_parser(env))
 }
 
 type parser_p = *const c_void;
