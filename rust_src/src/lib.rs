@@ -208,13 +208,10 @@ fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
     }
 }
 
-// TODO: this might be broken!
 extern "C" fn parser_dtor(_env: *mut ErlNifEnv, void_p: *mut c_void) -> () {
     let parser_p = void_p as ParserPointer;
     let parser = unsafe { Box::from_raw(*(parser_p as *mut *mut xml::Parser)) };
-    print!(" parser_dtor\n\r");
-    print!(" parser ref : {:?}\n\r", parser.as_ref() as *const xml::Parser);
-    // let the Drop destructor do the rest
+    // let the Drop destructor (if any) do the rest
 }
 
 // Throws exceptions on errors.
