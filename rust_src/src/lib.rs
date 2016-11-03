@@ -1,9 +1,8 @@
+#[macro_use] extern crate erlang_nif_sys;
 extern crate libc;
-#[macro_use] extern crate ruster_unsafe;
 extern crate xml;
 
-use libc::c_uint;
-use ruster_unsafe::*;
+use erlang_nif_sys::*;
 use std::fmt::{ Debug, Error as FormatError, Formatter };
 use std::mem::uninitialized;
 
@@ -23,16 +22,16 @@ nif_init!( b"rxml_native\0",
          );
 
 static mut NIF_INTERNAL_ERROR: ERL_NIF_TERM = 0 as ERL_NIF_TERM;
-static mut PARSER_RESOURCE: *mut ErlNifResourceType = 0 as *mut ErlNifResourceType;
+static mut PARSER_RESOURCE: *const ErlNifResourceType = 0 as *const ErlNifResourceType;
 
 mod atom {
 
     macro_rules! define { ($atom:ident) => {
         #[inline]
-        pub fn $atom(env: *mut ::ruster_unsafe::ErlNifEnv) -> ::ruster_unsafe::ERL_NIF_TERM {
+        pub fn $atom(env: *mut ::erlang_nif_sys::ErlNifEnv) -> ::erlang_nif_sys::ERL_NIF_TERM {
             unsafe {
                 if let Ok (atom) = ::std::ffi::CString::new(stringify!($atom)) {
-                    ::ruster_unsafe::enif_make_atom(env, atom.as_ptr() as *const u8)
+                    ::erlang_nif_sys::enif_make_atom(env, atom.as_ptr() as *const u8)
                 } else {
                     super::NIF_INTERNAL_ERROR
                 }
@@ -210,7 +209,7 @@ fn allocate_parser(env: *mut ErlNifEnv) -> Result<ERL_NIF_TERM, Error> {
 
 extern "C" fn parser_dtor(_env: *mut ErlNifEnv, void_p: *mut c_void) -> () {
     let parser_p = void_p as ParserPointer;
-    let parser = unsafe { Box::from_raw(*(parser_p as *mut *mut xml::Parser)) };
+    let _parser = unsafe { Box::from_raw(*(parser_p as *mut *mut xml::Parser)) };
     // let the Drop destructor (if any) do the rest
 }
 
@@ -251,7 +250,7 @@ fn get_parser<'parser>(env: *mut ErlNifEnv,
                        args: *const ERL_NIF_TERM,
                        _guard: &'parser ()) -> Result<&'parser mut xml::Parser, Error> {
     unsafe {
-        let paddr = &mut (0 as *mut c_void) as *mut *mut c_void;
+        let paddr = &mut (0 as *const c_void) as *mut *const c_void;
         if !is_enif_ok( enif_get_resource(env, *args.offset(i), PARSER_RESOURCE, paddr) ) {
             fail!(Error::BadArg(env))
         }
