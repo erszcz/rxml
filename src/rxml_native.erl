@@ -1,14 +1,5 @@
 -module(rxml_native).
 
-%% test
--export([native_add/2,
-         tuple_add/1,
-         print_binary/1,
-         test/0,
-         tuple/0,
-         test_badarg/0,
-         test_badarity/0]).
-
 %% exml.erl
 -export([escape_cdata_nif/1,
          unescape_cdata_nif/1,
@@ -34,31 +25,6 @@ load() ->
                       Path
               end,
     erlang:load_nif(filename:join(PrivDir, "librxml"), none).
-
-%%
-%% test
-%%
-
-native_add(_A, _B) ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
-tuple_add({_A, _B}) ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
-print_binary(_) ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
-test() ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
-tuple() ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
-test_badarg() ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
-
-test_badarity() ->
-    erlang:nif_error({?MODULE, nif_not_loaded}).
 
 %%
 %% exml.erl

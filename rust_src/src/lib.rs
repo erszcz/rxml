@@ -16,9 +16,15 @@ nif_init!( b"rxml_native\0",
            Some(upgrade),
            Some(unload),
            // exml_event:new_parser/0
-           nif!(b"new_parser\0", 0, new_parser),
+           nif!(b"new_parser\0", 0,         new_parser),
+           nif!(b"reset_parser\0", 1,       not_implemented),
+           nif!(b"free_parser\0", 1,        not_implemented),
            // TODO: make parse_nif ERL_NIF_DIRTY_JOB_CPU_BOUND?
-           nif!(b"parse_nif\0", 3, parse_nif)
+           nif!(b"parse_nif\0", 3,          parse_nif),
+           nif!(b"escape_cdata_nif\0", 1,   not_implemented),
+           nif!(b"unescape_cdata_nif\0", 1, not_implemented),
+           nif!(b"escape_attr_nif\0", 1,    not_implemented),
+           nif!(b"unescape_attr_nif\0", 1,  not_implemented)
          );
 
 static mut NIF_INTERNAL_ERROR: ERL_NIF_TERM = 0 as ERL_NIF_TERM;
@@ -47,6 +53,7 @@ mod atom {
     define!(xml_cdata);
     define!(xml_element_end);
     define!(xml_element_start);
+    define!(not_implemented);
 
 }
 
@@ -424,3 +431,9 @@ fn atom(env: *mut ErlNifEnv, a: &[u8]) -> ERL_NIF_TERM {
 fn is_enif_ok(t: c_int) -> bool {
     if t != 0 { true } else { false }
 }
+
+extern "C"
+fn not_implemented(env: *mut ErlNifEnv,
+                   _: c_int,
+                   _: *const ERL_NIF_TERM) -> ERL_NIF_TERM
+{ atom::not_implemented(env) }
