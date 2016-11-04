@@ -288,8 +288,14 @@ fn prefix_with(name: &str, prefix: &str) -> Result<String, ()> {
 }
 
 fn xml_element_end(env: *mut ErlNifEnv, tag: &xml::EndTag) -> Result<ERL_NIF_TERM, Error> {
-    let bname = try!(Binary::from_string(env, &tag.name)
-                            .and_then(|b| b.to_term(env)));
+    let bname = if let Some (ref prefix) = tag.prefix {
+        let prefixed = try!(prefix_with(&tag.name, prefix).or(Err (Error::BadXML(env))));
+        try!(Binary::from_string(env, &prefixed)
+             .and_then(|b| b.to_term(env)))
+    } else {
+        try!(Binary::from_string(env, &tag.name)
+             .and_then(|b| b.to_term(env)))
+    };
     Tuple(&[atom::xml_element_end(env), bname]).to_term(env)
 }
 
