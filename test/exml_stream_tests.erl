@@ -70,18 +70,18 @@ basic_parse_xmpp_stream_test() ->
     %?assertEqual(ok, exml_stream:free_parser(Parser6)).
 
 -define(BANANA_STREAM, <<"<stream:stream xmlns:stream='something'><foo attr='bar'>I am a banana!<baz/></foo></stream:stream>">>).
--define(assertIsBanana(Elements), (fun() -> % fun instead of begin/end because we bind CData in unhygenic macro
-                                           ?assertMatch([#xmlstreamstart{name = <<"stream:stream">>,
-                                                                         attrs = [{<<"xmlns:stream">>, <<"something">>}]},
-                                                         #xmlel{name = <<"foo">>,
-                                                                     attrs = [{<<"attr">>, <<"bar">>}],
-                                                                     children = [_CData, #xmlel{name = <<"baz">>}]},
-                                                         #xmlstreamend{name = <<"stream:stream">>}],
-                                                        Elements),
-                                           [_, #xmlel{children=[CData|_]}|_] = Elements,
-                                           ?assertEqual(<<"I am a banana!">>, exml:unescape_cdata(CData)),
-                                           Elements
-                                   end)()).
+-define(assertIsBanana(Elements),
+        (fun() -> % fun instead of begin/end because we bind CData in unhygenic macro
+                 %% this is a poor man's assertMatch
+                 [#xmlstreamstart{name = <<"stream:stream">>,
+                                  attrs = [{<<"xmlns:stream">>, <<"something">>}]},
+                  #xmlel{name = <<"foo">>,
+                         attrs = [{<<"attr">>, <<"bar">>}],
+                         children = [CData, #xmlel{name = <<"baz">>}]},
+                  #xmlstreamend{name = <<"stream:stream">>}] = xml_sort(Elements),
+                 ?assertEqual(<<"I am a banana!">>, exml:unescape_cdata(CData)),
+                 Elements
+         end)()).
 
 conv_test() ->
     AssertParses = fun(Input) ->

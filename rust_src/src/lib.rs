@@ -22,7 +22,7 @@ nif_init!( b"rxml_native\0",
            // TODO: make parse_nif ERL_NIF_DIRTY_JOB_CPU_BOUND?
            nif!(b"parse_nif\0", 3,          parse_nif),
            nif!(b"escape_cdata_nif\0", 1,   not_implemented),
-           nif!(b"unescape_cdata_nif\0", 1, not_implemented),
+           nif!(b"unescape_cdata_nif\0", 1, unescape_cdata),
            nif!(b"escape_attr_nif\0", 1,    not_implemented),
            nif!(b"unescape_attr_nif\0", 1,  not_implemented)
          );
@@ -50,10 +50,10 @@ mod atom {
     define!(badxml);
     define!(enif_call_failed);
     define!(none);
+    define!(not_implemented);
     define!(xml_cdata);
     define!(xml_element_end);
     define!(xml_element_start);
-    define!(not_implemented);
 
 }
 
@@ -443,3 +443,19 @@ fn not_implemented(env: *mut ErlNifEnv,
                    _: c_int,
                    _: *const ERL_NIF_TERM) -> ERL_NIF_TERM
 { atom::not_implemented(env) }
+
+extern "C"
+fn unescape_cdata(env: *mut ErlNifEnv,
+                  argc: c_int,
+                  args: *const ERL_NIF_TERM) -> ERL_NIF_TERM
+{
+    assert!(argc == 1);
+    let bin = nif_try!(Binary::from_ith_arg(env, 0, args));
+    let buf = nif_try!(std::str::from_utf8(bin.as_slice()).or(Err (Error::BadXML(env))));
+    match xml::unescape(buf) {
+        Ok (ref unescaped) =>
+            nif_try!(Binary::from_string(env, unescaped).and_then(|b| b.to_term(env))),
+        Err (_) =>
+            unsafe { enif_make_badarg(env) }
+    }
+}

@@ -23,5 +23,7 @@ xml_sort(#xmlel{} = El) ->
              children = [ xml_sort(C) || C <- Children ]};
 xml_sort({xml_element_start, Name, NSs, Attrs} = ElementStart) ->
     {xml_element_start, Name, lists:sort(NSs), lists:sort(Attrs)};
+xml_sort({xmlstreamend, _} = StreamEnd) ->
+    StreamEnd;
 xml_sort(Elements) when is_list(Elements) ->
     [ xml_sort(E) || E <- Elements ].
