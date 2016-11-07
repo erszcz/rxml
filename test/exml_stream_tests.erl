@@ -64,9 +64,7 @@ basic_parse_xmpp_stream_test() ->
     %                       _CData]}],
     %   Features),
     [#xmlel{children=[_, _, CData]}] = Features,
-    %% TODO: uncomment the correct version once unescaping is done in Rust
-    ?assertEqual({xmlcdata, <<"This is some CData">>}, CData).
-    %?assertEqual(<<"This is some CData">>, exml:unescape_cdata(CData)),
+    ?assertEqual(<<"This is some CData">>, exml:unescape_cdata(CData)).
     %?assertEqual(ok, exml_stream:free_parser(Parser6)).
 
 -define(BANANA_STREAM, <<"<stream:stream xmlns:stream='something'><foo attr='bar'>I am a banana!<baz/></foo></stream:stream>">>).
