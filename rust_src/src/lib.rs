@@ -21,10 +21,10 @@ nif_init!( b"rxml_native\0",
            nif!(b"free_parser\0", 1,        not_implemented),
            // TODO: make parse_nif ERL_NIF_DIRTY_JOB_CPU_BOUND?
            nif!(b"parse_nif\0", 3,          parse_nif),
-           nif!(b"escape_cdata_nif\0", 1,   not_implemented),
-           nif!(b"unescape_cdata_nif\0", 1, unescape_cdata),
-           nif!(b"escape_attr_nif\0", 1,    not_implemented),
-           nif!(b"unescape_attr_nif\0", 1,  not_implemented)
+           nif!(b"escape_cdata_nif\0", 1,   escape),
+           nif!(b"unescape_cdata_nif\0", 1, unescape),
+           nif!(b"escape_attr_nif\0", 1,    escape),
+           nif!(b"unescape_attr_nif\0", 1,  unescape)
          );
 
 static mut NIF_INTERNAL_ERROR: ERL_NIF_TERM = 0 as ERL_NIF_TERM;
@@ -445,9 +445,21 @@ fn not_implemented(env: *mut ErlNifEnv,
 { atom::not_implemented(env) }
 
 extern "C"
-fn unescape_cdata(env: *mut ErlNifEnv,
-                  argc: c_int,
-                  args: *const ERL_NIF_TERM) -> ERL_NIF_TERM
+fn escape(env: *mut ErlNifEnv,
+            argc: c_int,
+            args: *const ERL_NIF_TERM) -> ERL_NIF_TERM
+{
+    assert!(argc == 1);
+    let bin = nif_try!(Binary::from_ith_arg(env, 0, args));
+    let buf = nif_try!(std::str::from_utf8(bin.as_slice()).or(Err (Error::BadXML(env))));
+    let escaped = xml::escape(buf);
+    nif_try!(Binary::from_string(env, &escaped).and_then(|b| b.to_term(env)))
+}
+
+extern "C"
+fn unescape(env: *mut ErlNifEnv,
+            argc: c_int,
+            args: *const ERL_NIF_TERM) -> ERL_NIF_TERM
 {
     assert!(argc == 1);
     let bin = nif_try!(Binary::from_ith_arg(env, 0, args));
