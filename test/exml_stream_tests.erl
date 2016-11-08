@@ -105,7 +105,8 @@ stream_reopen_test() ->
 infinit_framed_stream_test() ->
     {ok, Parser0} = exml_stream:new_parser([{infinite_stream, true},
                                             {autoreset, true}]),
-    Els = [#xmlel{name = <<"open">>,
+    Els = [
+           #xmlel{name = <<"open">>,
                   attrs = [{<<"xmlns">>, <<"urn:ietf:params:xml:ns:xmpp-framing">>},
                            {<<"to">>, <<"example.com">>},
                            {<<"version">>, <<"1.0">>}]},
@@ -114,7 +115,7 @@ infinit_framed_stream_test() ->
                   attrs = [{<<"to">>, <<"ala@example.com">>}],
                   children = [#xmlel{name = <<"body">>,
                                      children = [#xmlcdata{content = <<"Hi, How Are You?">>}]}]}
-    ],
+          ],
     lists:foldl(fun(#xmlel{name = Name} = Elem, Parser) ->
         Bin = exml:to_binary(Elem),
         {ok, Parser1, [Element]} = exml_stream:parse(Parser, Bin), %% matches to one element list
