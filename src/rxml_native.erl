@@ -12,6 +12,9 @@
          free_parser/1,
          parse_nif/3]).
 
+%% debug Rust parser state
+-export([debug/1]).
+
 -on_load(load/0).
 
 -spec load() -> ok | {error, {atom(), string()}}.
@@ -67,3 +70,7 @@ free_parser(Parser) ->
       Result :: {ok, list()}.
 parse_nif(Parser, Data, Final) ->
     erlang:nif_error(not_loaded, [Parser, Data, Final]).
+
+-spec debug(exml_event:c_parser()) -> ok.
+debug(Parser) ->
+    erlang:nif_error({?MODULE, nif_not_loaded}, [Parser]).

@@ -6,7 +6,7 @@ authors = ["Radek Szymczyszyn <lavrin@gmail.com>"]
 [dependencies]
 libc = "*"
 erlang_nif-sys = "0.5.3"
-RustyXML = "*"
+RustyXML = { git = "https://github.com/erszcz/RustyXML" }
 
 [lib]
 name = "rxml"

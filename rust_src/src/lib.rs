@@ -24,7 +24,9 @@ nif_init!( b"rxml_native\0",
            nif!(b"escape_cdata_nif\0", 1,   escape),
            nif!(b"unescape_cdata_nif\0", 1, unescape),
            nif!(b"escape_attr_nif\0", 1,    escape),
-           nif!(b"unescape_attr_nif\0", 1,  unescape)
+           nif!(b"unescape_attr_nif\0", 1,  unescape),
+
+           nif!(b"debug\0", 1,              debug)
          );
 
 static mut NIF_INTERNAL_ERROR: ERL_NIF_TERM = 0 as ERL_NIF_TERM;
@@ -51,6 +53,7 @@ mod atom {
     define!(enif_call_failed);
     define!(none);
     define!(not_implemented);
+    define!(ok);
     define!(xml_cdata);
     define!(xml_element_end);
     define!(xml_element_start);
@@ -470,4 +473,14 @@ fn unescape(env: *mut ErlNifEnv,
         Err (_) =>
             unsafe { enif_make_badarg(env) }
     }
+}
+
+extern "C"
+fn debug(env: *mut ErlNifEnv, argc: c_int, args: *const ERL_NIF_TERM) -> ERL_NIF_TERM
+{
+    assert!(argc == 1);
+    let parser_lifetime = ();
+    let parser = nif_try!(get_parser(env, 0, args, &parser_lifetime));
+    println!("{:?}\r", parser);
+    atom::ok(env)
 }
