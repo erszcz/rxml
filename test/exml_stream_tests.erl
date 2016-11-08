@@ -124,8 +124,9 @@ infinit_framed_stream_test() ->
 
 parse_error_test() ->
     {ok, Parser0} = exml_stream:new_parser(),
-    Input = <<"top-level non-tag">>,
-    ?assertEqual({error, {"syntax error", Input}}, exml_stream:parse(Parser0, Input)),
+    Input = <<"top-level non-tag<tag-start">>,
+    ?assertEqual({error, {cdata_outside_outer_tag, Input}},
+                 exml_stream:parse(Parser0, Input)),
     ok = exml_stream:free_parser(Parser0).
 
 assert_parses_escape_cdata(Text) ->

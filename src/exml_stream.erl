@@ -62,21 +62,23 @@ new_parser(Opts)->
             {error, {E, R}}
     end.
 
--spec parse(parser(), binary()) ->
-        {ok, parser(), [xmlstreamelement()]} | {error, {string(), binary()}}.
+-spec parse(parser(), binary()) -> {ok, parser(), [xmlstreamelement()]}
+                                 | {error, {string(), binary()}}.
 parse(#parser{event_parser = EventParser, stack = OldStack, config = Config} = Parser, Input) ->
     case exml_event:parse(EventParser, Input) of
         {ok, Events} ->
-            {Elements, NewStack} = parse_events(Events, OldStack, [],
-                                                Config#config.infinite_stream),
-            NewParser = if
-                            NewStack =:= [] andalso Config#config.autoreset ->
-                                {ok, NewParser0} = reset_parser(Parser),
-                                NewParser0;
-                            true ->
-                                Parser
-                        end,
-            {ok, NewParser#parser{stack=NewStack}, Elements};
+            case parse_events(Events, OldStack, [], Config#config.infinite_stream) of
+                {error, Reason} -> {error, {Reason, Input}};
+                {Elements, NewStack} ->
+                    NewParser = if
+                                    NewStack =:= [] andalso Config#config.autoreset ->
+                                        {ok, NewParser0} = reset_parser(Parser),
+                                        NewParser0;
+                                    true ->
+                                        Parser
+                                end,
+                    {ok, NewParser#parser{stack=NewStack}, Elements}
+            end;
         {error, Msg} ->
             {error, {Msg, Input}}
     end.
@@ -122,8 +124,11 @@ parse_events([{xml_element_end, _Name} | Rest], [Element, Parent | Stack], Acc, 
     parse_events(Rest, [NewParent | Stack], Acc, InfiniteStream);
 parse_events([{xml_cdata, _CData} | Rest], [Top], Acc, false) ->
     parse_events(Rest, [Top], Acc, false);
-parse_events([{xml_cdata, _CData} | Rest], [], Acc, true) ->
-    parse_events(Rest, [], Acc, true);
+%% TODO: it might be that only one of the following two cases should return an error!
+parse_events([{xml_cdata, _CData} | _], [], _Acc, false) ->
+    {error, cdata_outside_outer_tag};
+parse_events([{xml_cdata, _CData} | _], [], _Acc, true) ->
+    {error, cdata_outside_outer_tag};
 parse_events([{xml_cdata, CData} | Rest],
              [#xmlel{children = [#xmlcdata{content = Content} | RestChildren]} = XML | Stack],
              Acc, InfiniteStream) ->
