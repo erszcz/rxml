@@ -1,3 +1,9 @@
+# rxml
+
+**rxml** is a fork of esl/exml which uses Rust for NIFs (native-implemented
+functions) and uses an XML parser written completely in Rust.
+Say bye-bye to C and Expat.
+
 exml
 ====
 
