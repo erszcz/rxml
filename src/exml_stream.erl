@@ -124,11 +124,8 @@ parse_events([{xml_element_end, _Name} | Rest], [Element, Parent | Stack], Acc, 
     parse_events(Rest, [NewParent | Stack], Acc, InfiniteStream);
 parse_events([{xml_cdata, _CData} | Rest], [Top], Acc, false) ->
     parse_events(Rest, [Top], Acc, false);
-%% TODO: it might be that only one of the following two cases should return an error!
-parse_events([{xml_cdata, _CData} | _], [], _Acc, false) ->
-    {error, cdata_outside_outer_tag};
-parse_events([{xml_cdata, _CData} | _], [], _Acc, true) ->
-    {error, cdata_outside_outer_tag};
+parse_events([{xml_cdata, _CData} | Rest], [], Acc, InfiniteStreamEnabled) ->
+    parse_events(Rest, [], Acc, InfiniteStreamEnabled);
 parse_events([{xml_cdata, CData} | Rest],
              [#xmlel{children = [#xmlcdata{content = Content} | RestChildren]} = XML | Stack],
              Acc, InfiniteStream) ->
