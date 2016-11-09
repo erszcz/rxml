@@ -4,6 +4,23 @@
 functions) and uses an XML parser written completely in Rust.
 Say bye-bye to C and Expat.
 
+## ToDo
+
+To some extent in order of importance:
+
+- [ ] prepare a branch / fork of MongooseIM which depends on this library
+      for quick/convenient development iterations
+- [ ] load test and compare with C/Expat-based `esl/exml`
+- [ ] use [Rustler](https://github.com/hansihe/Rustler) - higher-level
+      Erlang/Rust interface for maintainability
+- [ ] use the [ElementBuilder](https://docs.babelmonkeys.de/RustyXML/xml/struct.ElementBuilder.html)
+      interface of RustyXML instead of the event based interface and completely
+      get rid of `src/exml_event.erl` for maintainability
+- [ ] clean up: remove `c_src` completely
+- [ ] verify CData / attribute escaping differences across `esl/exml`,
+      RustyXML, and the XMPP / XML standards - they're exml and RustyXML
+      do it differently, but does it matter?
+
 exml
 ====
 
