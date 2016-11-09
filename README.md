@@ -16,10 +16,11 @@ To some extent in order of importance:
 - [ ] use the [ElementBuilder](https://docs.babelmonkeys.de/RustyXML/xml/struct.ElementBuilder.html)
       interface of RustyXML instead of the event based interface and completely
       get rid of `src/exml_event.erl` for maintainability
+- [ ] use [rebar3_rust](https://github.com/sdwolf/rebar3_rust) for building
 - [ ] clean up: remove `c_src` completely
 - [ ] verify CData / attribute escaping differences across `esl/exml`,
-      RustyXML, and the XMPP / XML standards - they're exml and RustyXML
-      do it differently, but does it matter?
+      RustyXML, and the XMPP / XML standards - exml and RustyXML
+      (un)escape differently, but does it matter?
 
 exml
 ====
