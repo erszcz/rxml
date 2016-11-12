@@ -67,6 +67,23 @@ basic_parse_xmpp_stream_test() ->
     ?assertEqual(<<"This is some CData">>, exml:unescape_cdata(CData)).
     %?assertEqual(ok, exml_stream:free_parser(Parser6)).
 
+bosh_stream_restart_test() ->
+    %% Line wrapping / double quotes here are deliberate - don't introduce extra whitespace.
+    BOSHRestart = <<"<body rid='1478920449405923' xmlns='http://jabber.org/protocol/httpbind' "
+                          "sid='36e8ab8ba312e27601c7039f97 ",
+                          "681c3b45c9bec2' xmlns:xmpp='urn:xmpp:xbosh' xml:lang='en' "
+                          "to='localhost' xmpp:restart='true'/>">>,
+    {ok, Element} = exml:parse(BOSHRestart),
+    ?exmlAssertEqual({xmlel,<<"body">>,
+                      [{<<"xmlns">>,<<"http://jabber.org/protocol/httpbind">>},
+                       {<<"xmlns:xmpp">>,<<"urn:xmpp:xbosh">>},
+                       {<<"rid">>,<<"1478920449405923">>},
+                       {<<"sid">>,<<"36e8ab8ba312e27601c7039f97 681c3b45c9bec2">>},
+                       {<<"xml:lang">>,<<"en">>},
+                       {<<"to">>,<<"localhost">>},
+                       {<<"xmpp:restart">>,<<"true">>}],
+                      []}, Element).
+
 -define(BANANA_STREAM, <<"<stream:stream xmlns:stream='something'><foo attr='bar'>I am a banana!<baz/></foo></stream:stream>">>).
 -define(assertIsBanana(Elements),
         (fun() -> % fun instead of begin/end because we bind CData in unhygenic macro
