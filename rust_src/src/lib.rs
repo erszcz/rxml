@@ -3,6 +3,7 @@ extern crate libc;
 extern crate xml;
 
 use erlang_nif_sys::*;
+use std::collections::HashMap;
 use std::fmt::{ Debug, Error as FormatError, Formatter };
 use std::mem::uninitialized;
 
@@ -279,8 +280,12 @@ fn xml_element_start(env: *mut ErlNifEnv, tag: &xml::StartTag) -> Result<ERL_NIF
         try!(Binary::from_string(env, &tag.name)
                     .and_then(|b| b.to_term(env)))
     };
-    let attrs = try!(attribute_list(env, tag.attributes.iter()));
-    let nss = try!(namespace_list(env, tag.attributes.iter()));
+    println!("orig attrs:");
+    for a in tag.attributes.iter() {
+        println!("  {:?}", a);
+    }
+    let (nss, nsmap) = try!(namespace_list(env, tag.attributes.iter()));
+    let attrs = try!(attribute_list(env, tag.attributes.iter(), nsmap));
     Tuple(&[atom::xml_element_start(env), bname, nss, attrs]).to_term(env)
 }
 
@@ -340,47 +345,9 @@ impl<'a> List<'a> {
     }
 }
 
-type AttrIter<'a> = std::collections::hash_map::Iter<'a, (String, Option<String>), String>;
-
-fn attribute_list(env: *mut ErlNifEnv,
-                  attrs: AttrIter) -> Result<ERL_NIF_TERM, Error> {
-    let l: Vec<ERL_NIF_TERM> = attrs
-        .filter(|&(&(ref name, ref opt_ns), _value)| {
-            if let &Some(ref ns) = opt_ns {
-                if ns == "http://www.w3.org/XML/1998/namespace"
-                    { true }
-                else
-                    { false }
-            } else if name == "xmlns"
-                { false }
-            else
-                { true }
-        })
-        .map(|(&(ref name, ref opt_ns), value)| {
-            if let &Some (ref ns) = opt_ns {
-                if ns == "http://www.w3.org/XML/1998/namespace" {
-                    let prefixed = nif_try!(prefix_with(name, "xml")
-                                            .or(Err (Error::BadXML(env))));
-                    let attr = [nif_try!(Binary::from_string(env, &prefixed)
-                                                .and_then(|b| b.to_term(env))),
-                                nif_try!(Binary::from_string(env, value)
-                                                .and_then(|b| b.to_term(env)))];
-                    nif_try!(Tuple(&attr).to_term(env))
-                } else {
-                    print!("unreachable: {:?}\n\r", (name, opt_ns, value));
-                    unreachable!()
-                }
-            } else {
-                let attr = [nif_try!(Binary::from_string(env, name)
-                                            .and_then(|b| b.to_term(env))),
-                            nif_try!(Binary::from_string(env, value)
-                                            .and_then(|b| b.to_term(env)))];
-                nif_try!(Tuple(&attr).to_term(env))
-            }
-        })
-        .collect();
-    List(&l).to_term(env)
-}
+type Namespaces = HashMap<String, String>;
+type AttrIter<'a> =
+    std::collections::hash_map::Iter<'a, (String, Option<String>), String>;
 
 // There are two prefixes which are defined by XML standards:
 // - xml   - http://www.w3.org/XML/1998/namespace
@@ -388,16 +355,21 @@ fn attribute_list(env: *mut ErlNifEnv,
 // See links for definitions respectively for XML 1.0 and XML 1.1:
 // - http://www.w3.org/TR/REC-xml-names/#ns-decl
 // - http://www.w3.org/TR/2006/REC-xml-names11-20060816/#ns-decl
-fn namespace_list(env: *mut ErlNifEnv,
-                  attrs: AttrIter) -> Result<ERL_NIF_TERM, Error> {
+fn namespace_list(env: *mut ErlNifEnv, attrs: AttrIter)
+    -> Result<(ERL_NIF_TERM, Namespaces), Error>
+{
+    let mut nsmap: Namespaces = HashMap::new();
+    nsmap.insert("http://www.w3.org/XML/1998/namespace".to_string(), "xml".to_string());
+    nsmap.insert("http://www.w3.org/2000/xmlns/".to_string(),        "xmlns".to_string());
     let l: Vec<ERL_NIF_TERM> = attrs
-        .filter(|&(&(ref name, ref opt_ns), _value)| {
+        .filter(|&(&(ref ns_prefix, ref opt_ns), full_ns)| {
             if let &Some(ref ns) = opt_ns {
-                if ns == "http://www.w3.org/2000/xmlns/"
-                    { true }
-                else
+                if ns == "http://www.w3.org/2000/xmlns/" {
+                    nsmap.insert(full_ns.to_string(), ns_prefix.to_string());
+                    true
+                } else
                     { false }
-            } else if name == "xmlns"
+            } else if ns_prefix == "xmlns"
                 { true }
             else
                 { false }
@@ -424,6 +396,52 @@ fn namespace_list(env: *mut ErlNifEnv,
                 // out by the previous .filter() pass.
                 print!("unreachable: {:?}\n\r", (name, opt_ns, value));
                 unreachable!()
+            }
+        })
+        .collect();
+    List(&l).to_term(env).and_then(|nss| Ok( (nss, nsmap) ))
+}
+
+fn attribute_list(env: *mut ErlNifEnv, attrs: AttrIter, nsmap: Namespaces)
+    -> Result<ERL_NIF_TERM, Error>
+{
+    println!("namespaces: {:?}", nsmap);
+    let l: Vec<ERL_NIF_TERM> = attrs
+        .filter(|&(&(ref name, ref opt_ns), _value)| {
+            if let &Some(ref ns) = opt_ns {
+                // if look up in nsmap: true
+                if nsmap.contains_key(ns)
+                    { true }
+                else
+                    { false }
+            } else if name == "xmlns" {
+                false
+            } else {
+                true
+            }
+        })
+        .map(|(&(ref name, ref opt_ns), value)| {
+            if let &Some (ref ns) = opt_ns {
+                if let Some (prefix) = nsmap.get(ns) {
+                    let prefixed = nif_try!(prefix_with(name, prefix)
+                                            .or(Err (Error::BadXML(env))));
+                    let attr = [nif_try!(Binary::from_string(env, &prefixed)
+                                                .and_then(|b| b.to_term(env))),
+                                nif_try!(Binary::from_string(env, value)
+                                                .and_then(|b| b.to_term(env)))];
+                    println!("attr1: {:?}", (prefixed, value));
+                    nif_try!(Tuple(&attr).to_term(env))
+                } else {
+                    print!("unreachable: {:?}\n\r", (name, opt_ns, value));
+                    unreachable!()
+                }
+            } else {
+                let attr = [nif_try!(Binary::from_string(env, name)
+                                            .and_then(|b| b.to_term(env))),
+                            nif_try!(Binary::from_string(env, value)
+                                            .and_then(|b| b.to_term(env)))];
+                    println!("attr2: {:?}", (name, value));
+                nif_try!(Tuple(&attr).to_term(env))
             }
         })
         .collect();

@@ -151,7 +151,9 @@ xml_children([Element | Rest], Children) ->
         [{binary(), binary()}].
 nss_to_fake_attrs([{Uri, none} | Rest], Acc) ->
     nss_to_fake_attrs(Rest, [{<<"xmlns">>, Uri} | Acc]);
-nss_to_fake_attrs([{Uri, Prefix} | Rest], Acc) ->
-    nss_to_fake_attrs(Rest, [{<<"xmlns:", Prefix/binary>>, Uri} | Acc]);
+%% TODO: remove the next clause? the Rust parser does this thing properly
+nss_to_fake_attrs([{_Uri, _Prefix} | Rest], Acc) ->
+    %nss_to_fake_attrs(Rest, [{<<"xmlns:", Prefix/binary>>, Uri} | Acc]);
+    nss_to_fake_attrs(Rest, Acc);
 nss_to_fake_attrs([], Acc) ->
     Acc. %% no lists:reverse, as we got the argument list in reversed order
