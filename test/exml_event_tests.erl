@@ -56,13 +56,12 @@ xmlns_declaration_test() ->
     {ok, Parsed} = exml_event:parse(Parser, <<"<str:stream"
                                               " xmlns:str='stream-ns'"
                                               " xmlns='naked-ns'>">>),
-    [{xml_element_start, Name, NSs, []}] = Parsed,
-    Sorted = [{xml_element_start, Name, lists:sort(NSs), []}],
-    ?assertEqual({ok, [{xml_element_start, <<"str:stream">>,
-                        lists:sort([{<<"naked-ns">>, none},
-                                    {<<"stream-ns">>, <<"str">>}]),
-                        []}]},
-                 {ok, Sorted}),
+    %% TODO: see exml_stream:nss_to_fake_attrs/2 for why an attribute is also expected
+    ?exmlAssertEqual([{xml_element_start, <<"str:stream">>,
+                       [{<<"naked-ns">>, none},
+                        {<<"stream-ns">>, <<"str">>}],
+                       [{<<"xmlns:str">>,<<"stream-ns">>}]}],
+                     Parsed),
     ?assertEqual(ok, exml_event:free_parser(Parser)).
 
 xmlns_nested_declaration_test() ->
@@ -70,11 +69,12 @@ xmlns_nested_declaration_test() ->
     {ok, Parsed} = exml_event:parse(Parser,
                                     <<"<str:stream xmlns:str='stream-ns'"
                                       "            xmlns='naked-ns'><str:nested>">>),
+    %% TODO: see exml_stream:nss_to_fake_attrs/2 for why an attribute is also expected
     ?exmlAssertEqual([{xml_element_start, <<"str:stream">>,
                        %% note the reverse order of namespaces
                        [{<<"naked-ns">>, none},
                         {<<"stream-ns">>, <<"str">>}],
-                       []},
+                       [{<<"xmlns:str">>,<<"stream-ns">>}]},
                       {xml_element_start, <<"str:nested">>, [], []}],
                      Parsed),
     ?assertEqual(ok, exml_event:free_parser(Parser)).
