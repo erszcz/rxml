@@ -280,10 +280,6 @@ fn xml_element_start(env: *mut ErlNifEnv, tag: &xml::StartTag) -> Result<ERL_NIF
         try!(Binary::from_string(env, &tag.name)
                     .and_then(|b| b.to_term(env)))
     };
-    println!("orig attrs:");
-    for a in tag.attributes.iter() {
-        println!("  {:?}", a);
-    }
     let (nss, nsmap) = try!(namespace_list(env, tag.attributes.iter()));
     let attrs = try!(attribute_list(env, tag.attributes.iter(), nsmap));
     Tuple(&[atom::xml_element_start(env), bname, nss, attrs]).to_term(env)
@@ -405,7 +401,6 @@ fn namespace_list(env: *mut ErlNifEnv, attrs: AttrIter)
 fn attribute_list(env: *mut ErlNifEnv, attrs: AttrIter, nsmap: Namespaces)
     -> Result<ERL_NIF_TERM, Error>
 {
-    println!("namespaces: {:?}", nsmap);
     let l: Vec<ERL_NIF_TERM> = attrs
         .filter(|&(&(ref name, ref opt_ns), _value)| {
             if let &Some(ref ns) = opt_ns {
@@ -429,7 +424,6 @@ fn attribute_list(env: *mut ErlNifEnv, attrs: AttrIter, nsmap: Namespaces)
                                                 .and_then(|b| b.to_term(env))),
                                 nif_try!(Binary::from_string(env, value)
                                                 .and_then(|b| b.to_term(env)))];
-                    println!("attr1: {:?}", (prefixed, value));
                     nif_try!(Tuple(&attr).to_term(env))
                 } else {
                     print!("unreachable: {:?}\n\r", (name, opt_ns, value));
@@ -440,7 +434,6 @@ fn attribute_list(env: *mut ErlNifEnv, attrs: AttrIter, nsmap: Namespaces)
                                             .and_then(|b| b.to_term(env))),
                             nif_try!(Binary::from_string(env, value)
                                             .and_then(|b| b.to_term(env)))];
-                    println!("attr2: {:?}", (name, value));
                 nif_try!(Tuple(&attr).to_term(env))
             }
         })
@@ -499,6 +492,5 @@ fn debug(env: *mut ErlNifEnv, argc: c_int, args: *const ERL_NIF_TERM) -> ERL_NIF
     assert!(argc == 1);
     let parser_lifetime = ();
     let parser = nif_try!(get_parser(env, 0, args, &parser_lifetime));
-    println!("{:?}\r", parser);
     atom::ok(env)
 }
